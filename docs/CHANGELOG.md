@@ -20,6 +20,7 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - 8 tes tanpa database.
 
 ### Diubah
+- `STATUS.md` diperbarui setelah commit pertama dikirim ke GitHub.
 - Struktur folder mengikuti referensi backend-beasiswa: `controllers`, `routes`, `validators`, `middlewares`, `utils`, `config`.
 - Seluruh kode dari JavaScript ke TypeScript mode strict.
 - Backend dipisah menjadi repo sendiri; `docker-compose.yml` dipindahkan ke sini.

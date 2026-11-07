@@ -22,7 +22,6 @@ Yang sudah teruji: pengecekan tipe, 8 tes tanpa database, build, dan server meny
 ## Belum ada
 
 - Migrasi Prisma, karena MySQL belum terpasang di lingkungan pengembangan.
-- Commit pertama. Remote sudah terpasang.
 
 ## Langkah berikutnya
 
