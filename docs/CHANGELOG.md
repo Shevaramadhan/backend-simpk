@@ -14,6 +14,15 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 ## 2026-11-07
 
 ### Ditambah
+- Migrasi `init` dan database `simpk` di MySQL Laragon.
+- Modul akun klien, katalog (jasa dan portofolio), dan pesanan beserta alur status (REQ-F01, REQ-F02).
+- 17 tes integrasi dengan MySQL: login, hak akses, kepemilikan data, status pesanan.
+- Perintah `npm run test:db`.
+
+### Diubah
+- `docs/04-api.md`, `docs/STATUS.md`, `docs/01-ketentuan.md`, `docs/KEPUTUSAN.md` mengikuti modul baru.
+
+### Ditambah
 - Folder `docs/` sebagai pusat informasi backend, termasuk ketentuan, arsitektur, database, API, hak akses, status, dan catatan keputusan.
 - Kerangka proyek: skema Prisma 14 model sesuai BRS, seed akun contoh empat role, login JWT, `/auth/me`, kelola akun internal.
 - Middleware `auth`, `role`, `project-access`, `validate`, `error`.

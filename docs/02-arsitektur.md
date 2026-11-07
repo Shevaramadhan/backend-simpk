@@ -22,7 +22,7 @@ backend/
 ├── middlewares/     auth, role, project-access, validate, error
 ├── prisma/          schema.prisma, migrasi, seed.ts
 ├── routes/          index.ts dan rute per modul
-├── tests/           tes otomatis
+├── tests/           smoke.test.ts (tanpa database), integration.test.ts (MySQL)
 ├── types/           perluasan tipe Express (req.user, req.projectId)
 ├── uploads/         berkas unggahan, tidak masuk Git
 ├── utils/           ApiError, response, jwt, password, progress

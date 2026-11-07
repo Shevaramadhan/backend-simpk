@@ -12,7 +12,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "node --import tsx --test tests/integration.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

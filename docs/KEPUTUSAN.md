@@ -19,3 +19,7 @@ Format: nomor, tanggal, keputusan, alasan, status.
 | B-11 | 7 Nov 2026 | Tetap Prisma 6 | Temuan `npm audit` tersisa ada di CLI Prisma; perbaikannya butuh Prisma 7 yang berisi perubahan besar | Berlaku, ditinjau setelah proyek |
 | B-12 | 7 Nov 2026 | zod 4 | Memperbaiki kerentanan pada zod 3 yang memproses input pengguna | Berlaku |
 | B-13 | 7 Nov 2026 | Riwayat aktivitas tidak dibuat | Tidak ada di BRS | Berlaku |
+| B-14 | 7 Nov 2026 | Akun klien dibuatkan Marketing, belum ada pendaftaran mandiri | Isu terbuka BRS; lebih aman tanpa pendaftaran publik dan mudah ditambah | Sementara, menunggu Koordinator Marketing |
+| B-15 | 7 Nov 2026 | Nomor pesanan `ORD-YYYYMMDD-XXXXXX` dengan akhiran acak | Tidak perlu penghitung dan tidak mengungkap jumlah pesanan | Berlaku |
+| B-16 | 7 Nov 2026 | Tes integrasi memakai database terpisah `simpk_test` | Tes menghapus data, sehingga data pengembangan harus terpisah | Berlaku |
+| B-17 | 7 Nov 2026 | MySQL lokal memakai Laragon yang sudah terpasang | Sudah tersedia di laptop pengembang; `docker-compose.yml` tetap untuk yang tidak memakai Laragon | Berlaku |

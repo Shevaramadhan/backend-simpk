@@ -1,0 +1,2 @@
+# Dikelola Prisma, jangan diedit manual.
+provider = "mysql"

@@ -50,9 +50,17 @@ Gunakan helper `ok()` untuk respons berhasil dan lempar `ApiError` untuk error. 
 - Data yang sudah dipakai dinonaktifkan, bukan dihapus.
 - Perubahan database selalu lewat `npm run db:migrate`, tidak diedit manual.
 
+## Tes
+
+- `npm test` tidak memerlukan database.
+- `npm run test:db` memakai MySQL sungguhan pada database `simpk_test` dan **menghapus seluruh isinya**. Tes menolak berjalan pada nama database yang tidak berakhiran `_test`.
+- Menyiapkan database tes sekali saja: buat database `simpk_test`, lalu jalankan `prisma migrate deploy` dengan `DATABASE_URL` mengarah ke sana.
+- Setiap modul baru wajib punya tes untuk hak akses dan kepemilikan data.
+
 ## Git
 
 - `main` untuk versi stabil, `dev` untuk integrasi, `feature/<nama>` untuk pekerjaan.
 - Pesan commit singkat dan menjelaskan perubahannya.
-- Sebelum commit: `npm run typecheck` dan `npm test`.
+- Sebelum commit: `npm run typecheck`, `npm test`, dan `npm run test:db`.
+- Commit memakai akun pengembang, tanpa baris `Co-Authored-By`.
 - Setiap perubahan dicatat di `docs/CHANGELOG.md`.
