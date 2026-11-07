@@ -45,6 +45,8 @@ export async function update(req: Request, res: Response, next: NextFunction) {
     if (!target || target.role === 'KLIEN') throw new ApiError(404, 'Pengguna tidak ditemukan.');
 
     const user = await prisma.user.update({ where: { id }, data: body, select: publicFields });
+    // Tautan reset yang sudah terkirim ke email lama tidak boleh tetap berlaku.
+    if (body.email) await prisma.passwordReset.deleteMany({ where: { userId: id } });
     ok(res, user, 'Akun diperbarui.');
   } catch (error) {
     next(error);

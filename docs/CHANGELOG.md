@@ -11,6 +11,26 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-08
+
+### Ditambah
+- `POST /auth/register`: klien mendaftar sendiri, role selalu `KLIEN`.
+- `POST /auth/forgot-password` dan `POST /auth/reset-password` dengan tabel `password_resets` dan `utils/mailer.ts`.
+- `POST /auth/change-password` untuk semua role.
+- `POST /orders/:id/approve` dengan nilai kesepakatan dan kolom `nilai_disepakati`.
+- `PATCH /clients/:id/email` untuk Operasional; `PATCH /users/:id` dapat mengubah email.
+- Migrasi `nilai_dan_reset_sandi`.
+- Tes integrasi untuk pendaftaran, ganti dan lupa kata sandi, persetujuan, dan perbaikan email.
+
+### Diubah
+- `PATCH /orders/:id/status` tidak lagi menerima `DISETUJUI`.
+- Pembatas percobaan pada rute auth memakai satu fungsi `limiter`.
+- `docs/05-hak-akses.md` dan `docs/KEPUTUSAN.md` mencatat keputusan B-18 sampai B-26; B-14 digantikan B-18.
+- Dokumen ketentuan, arsitektur, database, API, dan status mengikuti perubahan ini.
+
+### Dihapus
+- `POST /clients`: Marketing tidak lagi membuat akun klien.
+
 ## 2026-11-07
 
 ### Ditambah

@@ -7,6 +7,7 @@ Sumber kebenaran adalah `prisma/schema.prisma`. Dokumen ini menjelaskan maksudny
 | Model | Tabel | Fungsi |
 |---|---|---|
 | User | `users` | Akun semua pengguna dan role login |
+| PasswordReset | `password_resets` | Tautan lupa kata sandi, hanya hash yang disimpan |
 | Client | `clients` | Profil klien, satu per akun klien |
 | Service | `services` | Daftar jasa dengan estimasi biaya dan waktu |
 | Portfolio | `portfolios` | Contoh proyek untuk katalog |
@@ -44,6 +45,7 @@ Project 1-1 Review
 
 ## Aturan penting
 
+- `orders.anggaran` adalah perkiraan pemesan. `orders.nilai_disepakati` adalah harga hasil negosiasi yang diisi Marketing dan menjadi dasar nilai proyek.
 - Posisi PM, FE, BE, dan lainnya disimpan di `project_members`. Role login hanya empat.
 - Progres proyek dihitung dari rata-rata `tasks.persentase`, tidak disimpan di tabel `projects`.
 - `catatan_teknis` dan `catatan_klien` adalah kolom terpisah pada `progress_updates`.

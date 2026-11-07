@@ -18,9 +18,10 @@ validators/<nama>.validator.ts    aturan input (zod) dan tipenya
 
 ## Keamanan
 
-1. Setiap rute selain login dan katalog publik memakai `auth`.
+1. Setiap rute memakai `auth`, kecuali login, pendaftaran, lupa kata sandi, reset kata sandi, dan katalog publik. Rute publik yang menulis data wajib memakai pembatas percobaan.
 2. Periksa akses berlapis: role, lalu kepemilikan atau keanggotaan proyek. Pemeriksaan di frontend tidak dihitung.
 3. Data yang bukan hak pengguna dijawab 404 agar keberadaannya tidak terungkap.
+   Pendaftaran tidak pernah menerima role dari permintaan; hasilnya selalu `KLIEN`.
 4. Selalu pakai `select` eksplisit. `passwordHash` tidak boleh keluar dari API.
 5. **`catatanTeknis` tidak boleh dikirim ke role Klien**, dan Marketing juga tidak menerimanya (BRS 6.3). Kebocoran ini dihitung defect Critical.
 6. Setiap body divalidasi dengan middleware `validate`.

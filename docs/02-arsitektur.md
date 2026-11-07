@@ -25,7 +25,7 @@ backend/
 ├── tests/           smoke.test.ts (tanpa database), integration.test.ts (MySQL)
 ├── types/           perluasan tipe Express (req.user, req.projectId)
 ├── uploads/         berkas unggahan, tidak masuk Git
-├── utils/           ApiError, response, jwt, password, progress
+├── utils/           ApiError, response, jwt, password, progress, mailer
 ├── validators/      skema zod per modul
 ├── app.ts           menyusun aplikasi Express
 └── index.ts         titik masuk server
@@ -47,4 +47,4 @@ Permintaan
 
 ## Variabel lingkungan
 
-Lihat `.env.example`. Server berhenti saat mulai jika `DATABASE_URL` atau `JWT_SECRET` kosong, atau `JWT_SECRET` kurang dari 32 karakter.
+Lihat `.env.example`. Kolom `SMTP_*` opsional saat pengembangan: jika `SMTP_HOST` kosong, email tampil di terminal backend. Di production email tidak dikirim dan tidak ditampilkan, jadi SMTP wajib diisi. Server berhenti saat mulai jika `DATABASE_URL` atau `JWT_SECRET` kosong, atau `JWT_SECRET` kurang dari 32 karakter.

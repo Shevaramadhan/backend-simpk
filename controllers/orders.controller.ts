@@ -4,13 +4,14 @@ import type { NextFunction, Request, Response } from 'express';
 import prisma from '../config/prisma';
 import ApiError from '../utils/ApiError';
 import { ok } from '../utils/response';
-import type { CreateOrderInput, UpdateOrderStatusInput } from '../validators/orders.validator';
+import type { ApproveOrderInput, CreateOrderInput, UpdateOrderStatusInput } from '../validators/orders.validator';
 
 const orderFields = {
   id: true,
   nomor: true,
   kebutuhan: true,
   anggaran: true,
+  nilaiDisepakati: true,
   tenggatDiharapkan: true,
   status: true,
   alasanDitolak: true,
@@ -21,7 +22,7 @@ const orderFields = {
 
 const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = {
   BARU: ['DITINJAU', 'DITOLAK', 'DIBATALKAN'],
-  DITINJAU: ['DISETUJUI', 'DITOLAK', 'DIBATALKAN'],
+  DITINJAU: ['DITOLAK', 'DIBATALKAN'],
   DISETUJUI: ['DIBATALKAN'],
   DITOLAK: [],
   DIBATALKAN: [],
@@ -124,6 +125,26 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     if (!count) throw new ApiError(409, 'Pesanan baru saja diubah pengguna lain. Muat ulang halaman.');
 
     ok(res, await prisma.order.findUnique({ where: { id }, select: orderFields }), 'Status pesanan diperbarui.');
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Disetujui setelah MoU sepakat. Nilainya menjadi dasar nilai proyek.
+export async function approve(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+    const { nilaiDisepakati } = req.body as ApproveOrderInput;
+
+    if (!(await prisma.order.count({ where: { id } }))) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+    const { count } = await prisma.order.updateMany({
+      where: { id, status: 'DITINJAU' },
+      data: { status: 'DISETUJUI', nilaiDisepakati },
+    });
+    if (!count) throw new ApiError(409, 'Hanya pesanan yang sedang ditinjau yang dapat disetujui.');
+
+    ok(res, await prisma.order.findUnique({ where: { id }, select: orderFields }), 'Pesanan disetujui.');
   } catch (error) {
     next(error);
   }

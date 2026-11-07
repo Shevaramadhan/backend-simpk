@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { emailField } from './auth.validator';
 
-// Akun klien tidak dibuat di sini: caranya menunggu jawaban isu terbuka.
+// Akun klien dibuat lewat pendaftaran, bukan di sini.
 const internalRole = z.enum(['MARKETING', 'OPERASIONAL', 'TIM']);
 
 export const createUserSchema = z.object({
   name: z.string().trim().min(2).max(120),
-  email: z.string().trim().toLowerCase().pipe(z.email()),
+  email: emailField,
   password: z.string().min(8, 'Kata sandi minimal 8 karakter.').max(200),
   role: internalRole,
 });
@@ -13,6 +14,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z
   .object({
     name: z.string().trim().min(2).max(120).optional(),
+    email: emailField.optional(),
     role: internalRole.optional(),
     isActive: z.boolean().optional(),
   })

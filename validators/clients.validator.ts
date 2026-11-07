@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { emailField } from './auth.validator';
 
 const profil = {
   namaInstansi: z.string({ error: 'Nama instansi wajib diisi.' }).trim().min(2, 'Nama instansi minimal 2 karakter.').max(160),
@@ -6,13 +7,6 @@ const profil = {
   noWhatsapp: z.string().trim().max(25).nullable().optional(),
   alamat: z.string().trim().max(255).nullable().optional(),
 };
-
-export const createClientSchema = z.object({
-  name: z.string({ error: 'Nama wajib diisi.' }).trim().min(2, 'Nama minimal 2 karakter.').max(120),
-  email: z.string({ error: 'Email wajib diisi.' }).trim().toLowerCase().pipe(z.email('Format email tidak valid.')),
-  password: z.string({ error: 'Kata sandi wajib diisi.' }).min(8, 'Kata sandi minimal 8 karakter.').max(200),
-  ...profil,
-});
 
 export const updateClientSchema = z
   .object({
@@ -25,5 +19,7 @@ export const updateClientSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, 'Tidak ada data yang diubah.');
 
-export type CreateClientInput = z.infer<typeof createClientSchema>;
+export const updateClientEmailSchema = z.object({ email: emailField });
+
+export type UpdateClientEmailInput = z.infer<typeof updateClientEmailSchema>;
 export type UpdateClientInput = z.infer<typeof updateClientSchema>;

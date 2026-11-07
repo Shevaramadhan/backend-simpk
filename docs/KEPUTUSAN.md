@@ -13,13 +13,22 @@ Format: nomor, tanggal, keputusan, alasan, status.
 | B-05 | 7 Nov 2026 | TypeScript mode strict | Keputusan pengembang; kesalahan tertangkap saat build | Berlaku |
 | B-06 | 7 Nov 2026 | Backend dan frontend dua repo terpisah | Repo sudah disiapkan di GitHub | Berlaku |
 | B-07 | 7 Nov 2026 | Empat role login; posisi proyek di `project_members` | BRS 9.1: PM ditunjuk per proyek | Berlaku |
-| B-08 | 7 Nov 2026 | Progres proyek = rata-rata persentase tugas | Memenuhi BRS (Tim mengisi persentase) tanpa angka proyek yang diisi manual | Usulan, menunggu System Analyst |
+| B-08 | 7 Nov 2026 | Progres proyek = rata-rata persentase tugas | Memenuhi BRS (Tim mengisi persentase) tanpa angka proyek yang diisi manual | Disetujui PM, menunggu konfirmasi System Analyst |
 | B-09 | 7 Nov 2026 | Proyek 1-N tagihan, tagihan 1-N pembayaran | BRS mewajibkan tagihan PDF; aman jika skema DP atau termin dipakai | Berlaku |
 | B-10 | 7 Nov 2026 | Catatan teknis dan catatan klien kolom terpisah per update tugas | Mengikuti BRS 9.2 dan mudah memilih kolom untuk klien | Berlaku |
 | B-11 | 7 Nov 2026 | Tetap Prisma 6 | Temuan `npm audit` tersisa ada di CLI Prisma; perbaikannya butuh Prisma 7 yang berisi perubahan besar | Berlaku, ditinjau setelah proyek |
 | B-12 | 7 Nov 2026 | zod 4 | Memperbaiki kerentanan pada zod 3 yang memproses input pengguna | Berlaku |
 | B-13 | 7 Nov 2026 | Riwayat aktivitas tidak dibuat | Tidak ada di BRS | Berlaku |
-| B-14 | 7 Nov 2026 | Akun klien dibuatkan Marketing, belum ada pendaftaran mandiri | Isu terbuka BRS; lebih aman tanpa pendaftaran publik dan mudah ditambah | Sementara, menunggu Koordinator Marketing |
+| B-14 | 7 Nov 2026 | Akun klien dibuatkan Marketing, belum ada pendaftaran mandiri | Isu terbuka BRS; lebih aman tanpa pendaftaran publik dan mudah ditambah | Digantikan B-18 |
 | B-15 | 7 Nov 2026 | Nomor pesanan `ORD-YYYYMMDD-XXXXXX` dengan akhiran acak | Tidak perlu penghitung dan tidak mengungkap jumlah pesanan | Berlaku |
 | B-16 | 7 Nov 2026 | Tes integrasi memakai database terpisah `simpk_test` | Tes menghapus data, sehingga data pengembangan harus terpisah | Berlaku |
 | B-17 | 7 Nov 2026 | MySQL lokal memakai Laragon yang sudah terpasang | Sudah tersedia di laptop pengembang; `docker-compose.yml` tetap untuk yang tidak memakai Laragon | Berlaku |
+| B-18 | 8 Nov 2026 | Klien mendaftar sendiri, lalu memesan setelah login; hasil pendaftaran selalu role Klien | Masukan tim. Kata sandi dibuat klien sendiri, pesanan selalu punya pemilik, dan klien memantau sejak memesan. Menggantikan rencana pesanan tanpa login yang tidak jadi dirilis | Berlaku, sampaikan ke Koordinator Marketing |
+| B-19 | 8 Nov 2026 | Kolom `nilai_disepakati` pada pesanan, diisi Marketing saat menyetujui | BRS 9.2 memuat nilai pesanan; harga disepakati Marketing, proyek dibuat Operasional | Berlaku |
+| B-20 | 8 Nov 2026 | Persetujuan pesanan lewat endpoint sendiri, bukan perubahan status biasa | Pesanan tidak boleh disetujui tanpa nilai | Berlaku |
+| B-21 | 8 Nov 2026 | Setiap pengguna dapat mengganti kata sandi sendiri | Akun internal memakai kata sandi awal dari Operasional | Berlaku |
+| B-22 | 8 Nov 2026 | Lupa kata sandi lewat tautan email 30 menit sekali pakai; Marketing tidak dapat mereset | Keputusan PM. Jika Marketing dapat mereset, Marketing dapat masuk ke akun klien | Berlaku, butuh akun email pengirim sebelum UAT |
+| B-23 | 8 Nov 2026 | Operasional memperbaiki email yang salah ketik; tautan reset lama dibatalkan | Pengelola pengguna pada matriks 6.3, dan tetap tidak melihat kata sandi | Berlaku |
+| B-24 | 8 Nov 2026 | Tugas dibuat dan dibagi PM atau Operasional; anggota memperbarui tugas miliknya | Keputusan PM; memperjelas "PM/Tim" pada BRS | Berlaku |
+| B-25 | 8 Nov 2026 | PM melihat ringkasan progres proyeknya tanpa data uang | Keputusan PM; menyelesaikan perbedaan BRS 7.1 dan matriks 6.3 | Berlaku, perlu dicatat di BRS |
+| B-26 | 8 Nov 2026 | Klien melihat judul, status, dan persen tugas tanpa deskripsi; catatan klien tampil tanpa persetujuan | Keputusan PM; BRS 7.1 meminta status task dan waktu proyek terbatas | Berlaku |

@@ -10,7 +10,11 @@ Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak,
 |---|---|---|---|
 | GET | `/health` | Publik | Memeriksa server |
 | POST | `/auth/login` | Publik | Maksimal 10 percobaan per 15 menit |
+| POST | `/auth/register` | Publik | Pendaftaran akun Klien, maksimal 10 per jam |
+| POST | `/auth/forgot-password` | Publik | Mengirim tautan reset, maksimal 5 per 15 menit |
+| POST | `/auth/reset-password` | Publik | Membuat kata sandi baru dari tautan |
 | GET | `/auth/me` | Semua role | Data pengguna yang sedang masuk |
+| POST | `/auth/change-password` | Semua role | Mengganti kata sandi sendiri |
 | GET | `/users` | Operasional | Daftar akun internal |
 | POST | `/users` | Operasional | Membuat akun internal |
 | PATCH | `/users/:id` | Operasional | Mengubah nama, role, status aktif |
@@ -24,12 +28,13 @@ Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak,
 | PUT | `/portfolios/:id` | Marketing | Mengubah portofolio |
 | DELETE | `/portfolios/:id` | Marketing | Menghapus portofolio |
 | GET | `/clients` | Marketing, Operasional | Daftar klien |
-| POST | `/clients` | Marketing | Membuat akun dan profil klien |
 | PATCH | `/clients/:id` | Marketing | Mengubah profil atau status aktif |
+| PATCH | `/clients/:id/email` | Operasional | Memperbaiki email klien |
 | POST | `/orders` | Klien, Marketing | Membuat pesanan |
 | GET | `/orders` | Klien, Marketing, Operasional | Klien hanya menerima pesanan miliknya |
 | GET | `/orders/:id` | Klien, Marketing, Operasional | Pesanan klien lain dijawab 404 |
 | PATCH | `/orders/:id/status` | Marketing | Mengubah status pesanan |
+| POST | `/orders/:id/approve` | Marketing | Menyetujui pesanan dengan nilai kesepakatan |
 
 ### POST /auth/login
 
@@ -64,9 +69,9 @@ Email salah, kata sandi salah, dan akun nonaktif dijawab sama: `401 Email atau k
 
 ### PATCH /users/:id
 
-Minimal satu dari `name`, `role`, `isActive`. Pengguna tidak dapat menonaktifkan atau mengubah role akunnya sendiri.
+Minimal satu dari `name`, `email`, `role`, `isActive`. Pengguna tidak dapat menonaktifkan atau mengubah role akunnya sendiri.
 
-### POST /clients
+### POST /auth/register
 
 ```json
 {
@@ -75,12 +80,47 @@ Minimal satu dari `name`, `role`, `isActive`. Pengguna tidak dapat menonaktifkan
   "password": "minimal8karakter",
   "namaInstansi": "Instansi",
   "jenisKlien": "Organisasi",
-  "noWhatsapp": "08xx",
-  "alamat": "Padang"
+  "noWhatsapp": "081234567890"
 }
 ```
 
-`noWhatsapp` dan `alamat` opsional. Menonaktifkan klien lewat `PATCH` juga menonaktifkan akun login-nya.
+Semua kolom wajib. Akun selalu menjadi `KLIEN`; kolom `role` pada permintaan diabaikan. Jawabannya sama seperti login, sehingga klien langsung masuk.
+
+### POST /auth/change-password
+
+```json
+{ "passwordLama": "kata sandi saat ini", "passwordBaru": "minimal8karakter" }
+```
+
+Kata sandi lama yang salah dijawab `400`, bukan `401`, agar sesi tetap berjalan. Token yang sudah terbit tetap berlaku sampai masa berlakunya habis.
+
+### POST /auth/forgot-password
+
+```json
+{ "email": "klien@contoh.test" }
+```
+
+Jawaban selalu `200` dan sama, baik email terdaftar maupun tidak. Tautan dikirim ke email, berlaku 30 menit, dan hanya tautan terbaru yang berlaku.
+
+### POST /auth/reset-password
+
+```json
+{ "token": "64 karakter dari tautan", "passwordBaru": "minimal8karakter" }
+```
+
+Tautan salah, kedaluwarsa, atau sudah dipakai dijawab `400`.
+
+### PATCH /clients/:id/email
+
+```json
+{ "email": "benar@contoh.test" }
+```
+
+Untuk email yang salah ketik saat mendaftar. Tautan reset yang belum dipakai ikut dibatalkan. `PATCH /users/:id` melakukan hal yang sama untuk akun internal.
+
+### PATCH /clients/:id
+
+Menonaktifkan klien juga menonaktifkan akun login-nya.
 
 ### POST /orders
 
@@ -99,10 +139,18 @@ Hanya `kebutuhan` yang wajib. Marketing wajib mengirim `clientId`. Untuk Klien, 
 | Dari | Boleh menjadi |
 |---|---|
 | BARU | DITINJAU, DITOLAK, DIBATALKAN |
-| DITINJAU | DISETUJUI, DITOLAK, DIBATALKAN |
+| DITINJAU | DITOLAK, DIBATALKAN |
 | DISETUJUI | DIBATALKAN |
 
-Perubahan di luar tabel dijawab `409`. Status `MENJADI_PROYEK` hanya diisi modul proyek.
+Perubahan di luar tabel dijawab `409`. Status `DISETUJUI` hanya lewat `POST /orders/:id/approve`, dan `MENJADI_PROYEK` hanya diisi modul proyek.
+
+### POST /orders/:id/approve
+
+```json
+{ "nilaiDisepakati": 2500000 }
+```
+
+Hanya untuk pesanan berstatus `DITINJAU`, dilakukan setelah MoU disepakati.
 
 ## Rencana
 

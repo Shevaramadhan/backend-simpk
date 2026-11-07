@@ -1,13 +1,14 @@
 // Tes integrasi dengan MySQL sungguhan. Lihat docs/01-ketentuan.md untuk cara menyiapkan simpk_test.
 import './setup-env-db';
 import assert from 'node:assert';
-import { after, before, describe, test } from 'node:test';
+import { after, before, describe, mock, test } from 'node:test';
 import type { Role } from '@prisma/client';
 import request from 'supertest';
 import app from '../app';
 import prisma from '../config/prisma';
 import { signToken } from '../utils/jwt';
-import { hashPassword } from '../utils/password';
+import { mailer } from '../utils/mailer';
+import { comparePassword, hashPassword } from '../utils/password';
 
 const PASSWORD = 'kata-sandi-uji-123';
 const tokens = {} as Record<'marketing' | 'operasional' | 'tim' | 'klienA' | 'klienB', string>;
@@ -25,6 +26,7 @@ async function makeUser(email: string, role: Role) {
 }
 
 async function clean() {
+  await prisma.passwordReset.deleteMany();
   await prisma.order.deleteMany();
   await prisma.portfolio.deleteMany();
   await prisma.service.deleteMany();
@@ -111,26 +113,46 @@ describe('katalog', () => {
 });
 
 describe('akun klien', () => {
-  const baru = { name: 'Klien Baru', email: 'baru@uji.test', password: PASSWORD, namaInstansi: 'Instansi Baru', jenisKlien: 'Perorangan' };
+  const baru = { name: 'Klien Baru', email: 'Baru@Uji.test', password: PASSWORD, namaInstansi: 'Instansi Baru', jenisKlien: 'Perorangan', noWhatsapp: '081234567890' };
+  const daftar = (data: object) => request(app).post('/api/v1/auth/register').send(data);
+  let clientId: number;
 
-  test('Marketing membuat akun klien yang dapat langsung masuk', async () => {
-    assert.equal((await api(tokens.klienA).post('/clients').send(baru)).status, 403);
-    const res = await api(tokens.marketing).post('/clients').send(baru);
+  test('pendaftaran selalu menjadi Klien walau mengirim role lain', async () => {
+    const res = await daftar({ ...baru, role: 'OPERASIONAL' });
     assert.equal(res.status, 201);
+    assert.equal(res.body.data.user.role, 'KLIEN');
+    assert.equal(res.body.data.user.email, 'baru@uji.test');
     assert.ok(!JSON.stringify(res.body).includes('passwordHash'));
-    const login = await request(app).post('/api/v1/auth/login').send({ email: baru.email, password: PASSWORD });
-    assert.equal(login.body.data.user.role, 'KLIEN');
+    assert.equal((await api(res.body.data.token).get('/users')).status, 403);
+    assert.equal((await api(res.body.data.token).post('/orders').send({ kebutuhan: 'Membuat website profil.' })).status, 201);
+    clientId = (await prisma.client.findFirstOrThrow({ where: { user: { email: 'baru@uji.test' } } })).id;
   });
 
-  test('email yang sudah terdaftar ditolak', async () => {
-    assert.equal((await api(tokens.marketing).post('/clients').send(baru)).status, 409);
+  test('email terdaftar dan isian tidak lengkap ditolak', async () => {
+    const res = await daftar(baru);
+    assert.equal(res.status, 409);
+    assert.ok(res.body.errors.email);
+    assert.equal((await daftar({ ...baru, email: 'lain@uji.test', noWhatsapp: 'abc' })).status, 400);
+    assert.equal((await daftar({ ...baru, email: 'lain@uji.test', password: 'pendek' })).status, 400);
+  });
+
+  test('Marketing tidak dapat membuat akun klien', async () => {
+    assert.equal((await api(tokens.marketing).post('/clients').send(baru)).status, 404);
+  });
+
+  test('hanya Operasional yang memperbaiki email klien', async () => {
+    const path = `/clients/${clientId}/email`;
+    assert.equal((await api(tokens.marketing).patch(path).send({ email: 'x@uji.test' })).status, 403);
+    assert.equal((await api(tokens.klienA).patch(path).send({ email: 'x@uji.test' })).status, 403);
+    assert.equal((await api(tokens.operasional).patch(path).send({ email: 'a@uji.test' })).status, 409);
+    assert.equal((await api(tokens.operasional).patch('/clients/999999/email').send({ email: 'x@uji.test' })).status, 404);
+    const res = await api(tokens.operasional).patch(path).send({ email: 'perbaikan@uji.test' });
+    assert.equal(res.body.data.user.email, 'perbaikan@uji.test');
   });
 
   test('klien yang dinonaktifkan tidak dapat masuk', async () => {
-    const list = await api(tokens.marketing).get('/clients');
-    const target = list.body.data.find((c: { namaInstansi: string }) => c.namaInstansi === 'Instansi Baru');
-    assert.equal((await api(tokens.marketing).patch(`/clients/${target.id}`).send({ isActive: false })).status, 200);
-    const login = await request(app).post('/api/v1/auth/login').send({ email: baru.email, password: PASSWORD });
+    assert.equal((await api(tokens.marketing).patch(`/clients/${clientId}`).send({ isActive: false })).status, 200);
+    const login = await request(app).post('/api/v1/auth/login').send({ email: 'perbaikan@uji.test', password: PASSWORD });
     assert.equal(login.status, 401);
   });
 });
@@ -177,10 +199,16 @@ describe('pesanan', () => {
     const { body } = await api(tokens.klienA).post('/orders').send(pesanan);
     const path = `/orders/${body.data.id}/status`;
     assert.equal((await api(tokens.klienA).patch(path).send({ status: 'DITINJAU' })).status, 403);
-    assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DISETUJUI' })).status, 409);
+    const approve = `/orders/${body.data.id}/approve`;
+    assert.equal((await api(tokens.marketing).post(approve).send({ nilaiDisepakati: 1000 })).status, 409);
+    assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DISETUJUI' })).status, 400);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'MENJADI_PROYEK' })).status, 400);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DITINJAU' })).status, 200);
-    assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DISETUJUI' })).status, 200);
+    assert.equal((await api(tokens.operasional).post(approve).send({ nilaiDisepakati: 1000 })).status, 403);
+    assert.equal((await api(tokens.marketing).post(approve).send({})).status, 400);
+    const disetujui = await api(tokens.marketing).post(approve).send({ nilaiDisepakati: 2500000 });
+    assert.equal(disetujui.body.data.status, 'DISETUJUI');
+    assert.equal(Number(disetujui.body.data.nilaiDisepakati), 2500000);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DITOLAK', alasanDitolak: 'x' })).status, 409);
   });
 
@@ -190,5 +218,85 @@ describe('pesanan', () => {
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DITOLAK' })).status, 400);
     const res = await api(tokens.marketing).patch(path).send({ status: 'DITOLAK', alasanDitolak: 'Di luar layanan.' });
     assert.equal(res.body.data.alasanDitolak, 'Di luar layanan.');
+  });
+});
+
+describe('ganti kata sandi', () => {
+  const ganti = (token: string, data: object) => api(token).post('/auth/change-password').send(data);
+  const baru = 'kata-sandi-baru-456';
+
+  test('wajib login', async () => {
+    const res = await request(app).post('/api/v1/auth/change-password').send({ passwordLama: PASSWORD, passwordBaru: baru });
+    assert.equal(res.status, 401);
+  });
+
+  test('kata sandi lama salah atau baru tidak layak ditolak', async () => {
+    assert.equal((await ganti(tokens.tim, { passwordLama: 'salah-sekali', passwordBaru: baru })).status, 400);
+    assert.equal((await ganti(tokens.tim, { passwordLama: PASSWORD, passwordBaru: 'pendek' })).status, 400);
+    assert.equal((await ganti(tokens.tim, { passwordLama: PASSWORD, passwordBaru: PASSWORD })).status, 400);
+  });
+
+  test('berhasil dan hanya mengubah akun sendiri', async () => {
+    assert.equal((await ganti(tokens.tim, { passwordLama: PASSWORD, passwordBaru: baru })).status, 200);
+    const tim = await prisma.user.findUniqueOrThrow({ where: { email: 't@uji.test' } });
+    const lain = await prisma.user.findUniqueOrThrow({ where: { email: 'o@uji.test' } });
+    assert.ok(await comparePassword(baru, tim.passwordHash));
+    assert.ok(await comparePassword(PASSWORD, lain.passwordHash));
+  });
+});
+
+describe('lupa kata sandi', () => {
+  const lupa = (email: string) => request(app).post('/api/v1/auth/forgot-password').send({ email });
+  const reset = (token: string, passwordBaru: string) => request(app).post('/api/v1/auth/reset-password').send({ token, passwordBaru });
+  const tunggu = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Email tidak benar-benar dikirim; tautan diambil dari isi email tiruan.
+  async function mintaToken(email: string) {
+    let text = '';
+    const send = mock.method(mailer, 'send', async (_to: string, _subject: string, body: string) => {
+      text = body;
+    });
+    await lupa(email);
+    for (let i = 0; i < 100 && !text; i += 1) await tunggu(20);
+    send.mock.restore();
+    return /token=([0-9a-f]{64})/.exec(text)?.[1] ?? '';
+  }
+
+  test('email tidak terdaftar mendapat jawaban yang sama dan tidak ada email', async () => {
+    const send = mock.method(mailer, 'send', async () => {});
+    const terdaftar = await lupa('o@uji.test');
+    const tidak = await lupa('tidak-ada@uji.test');
+    await tunggu(200);
+    assert.equal(terdaftar.status, 200);
+    assert.deepEqual(tidak.body, terdaftar.body);
+    assert.equal(send.mock.callCount(), 1);
+    send.mock.restore();
+  });
+
+  test('token tersimpan sebagai hash, berlaku sekali, dan mengganti kata sandi', async () => {
+    const token = await mintaToken('o@uji.test');
+    assert.ok(token);
+    assert.equal(await prisma.passwordReset.count({ where: { tokenHash: token } }), 0);
+
+    assert.equal((await reset(token, 'pendek')).status, 400);
+    const baru = 'kata-sandi-reset-789';
+    assert.equal((await reset(token, baru)).status, 200);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: 'o@uji.test' } });
+    assert.ok(await comparePassword(baru, user.passwordHash));
+    assert.equal((await reset(token, 'kata-sandi-lain-000')).status, 400);
+  });
+
+  test('tautan kedaluwarsa dan tautan tidak dikenal ditolak', async () => {
+    const token = await mintaToken('m@uji.test');
+    await prisma.passwordReset.updateMany({ data: { expiresAt: new Date(Date.now() - 1000) } });
+    assert.equal((await reset(token, 'kata-sandi-lain-000')).status, 400);
+    assert.equal((await reset('0'.repeat(64), 'kata-sandi-lain-000')).status, 400);
+  });
+
+  test('tautan dibatalkan saat email diperbaiki Operasional', async () => {
+    const token = await mintaToken('b@uji.test');
+    assert.ok(token);
+    assert.equal((await api(tokens.operasional).patch(`/clients/${klienBId}/email`).send({ email: 'b-baru@uji.test' })).status, 200);
+    assert.equal((await reset(token, 'kata-sandi-lain-000')).status, 400);
   });
 });
