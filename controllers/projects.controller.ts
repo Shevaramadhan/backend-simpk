@@ -18,7 +18,7 @@ const projectFields = {
   tglMulai: true,
   targetSelesai: true,
   status: true,
-  order: { select: { id: true, nomor: true, judul: true, kebutuhan: true, client: { select: { namaInstansi: true } } } },
+  order: { select: { id: true, nomor: true, judul: true, kebutuhan: true, tenggatDiharapkan: true, client: { select: { namaInstansi: true } } } },
   tasks: { select: { persentase: true, bobot: true, bidang: true } },
 } satisfies Prisma.ProjectSelect;
 
@@ -43,6 +43,8 @@ function present(project: ProjectRow, role: CurrentUser['role']) {
     klien: order.client.namaInstansi,
     nomorPesanan: order.nomor,
     kebutuhan: order.kebutuhan,
+    // Tenggat yang diminta klien menjadi acuan selama Operasional belum menetapkan target selesai.
+    tenggatDiharapkan: order.tenggatDiharapkan,
     progres: projectProgress(tasks),
     progresBidang: progressByBidang(tasks),
     ...(role === 'OPERASIONAL' || role === 'MARKETING' ? { nilai } : {}),
@@ -84,10 +86,16 @@ export async function detail(req: Request, res: Response, next: NextFunction) {
         },
       },
     });
+    const documents = await prisma.orderDocument.findMany({
+      where: { orderId: project.order.id },
+      select: { id: true, namaFile: true, mime: true, ukuran: true },
+      orderBy: { id: 'asc' },
+    });
     const { members, ...rest } = project;
     ok(res, {
       ...present(rest, user.role),
       isPm: members.some((member) => member.userId === user.id && member.isPm),
+      documents,
       // Susunan tim tidak untuk Klien (BRS 6.3).
       ...(user.role === 'KLIEN'
         ? {}

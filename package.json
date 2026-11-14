@@ -11,7 +11,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
+    "deploy": "npm ci && npm run build && prisma migrate deploy",
     "typecheck": "tsc --noEmit",
     "test:db": "node --import tsx --test tests/integration.test.ts"
   },

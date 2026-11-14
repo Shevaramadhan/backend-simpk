@@ -97,7 +97,7 @@ async function sendResetLink(email: string) {
   await mailer.send(
     email,
     'Atur ulang kata sandi SIM Proyek Klien Neo Telemetri',
-    `Halo ${user.name},\n\nBuka tautan berikut untuk membuat kata sandi baru. Tautan berlaku ${RESET_MINUTES} menit dan hanya dapat dipakai sekali.\n\n${env.frontendOrigin}/reset-sandi?token=${token}\n\nAbaikan email ini jika Anda tidak memintanya.`,
+    `Halo ${user.name},\n\nBuka tautan berikut untuk membuat kata sandi baru. Tautan berlaku ${RESET_MINUTES} menit dan hanya dapat dipakai sekali.\n\n${env.frontendOrigins[0]}/reset-sandi?token=${token}\n\nAbaikan email ini jika Anda tidak memintanya.`,
   );
 }
 

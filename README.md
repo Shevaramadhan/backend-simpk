@@ -23,6 +23,8 @@ npm run db:seed
 npm run dev                          # http://localhost:4000
 ```
 
+Panduan deploy ke VPS aaPanel dan Vercel ada di [docs/06-deploy.md](docs/06-deploy.md).
+
 ## Akun contoh
 
 Dibuat oleh seed untuk pengembangan, kata sandinya mengikuti `SEED_PASSWORD`:

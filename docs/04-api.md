@@ -67,6 +67,8 @@ Email salah, kata sandi salah, dan akun nonaktif dijawab sama: `401 Email atau k
 
 `role` hanya `MARKETING`, `OPERASIONAL`, atau `TIM`.
 
+Setiap akun pada `GET /users` menyertakan `jumlahProject`, yaitu banyak project yang pernah diikuti (dipakai kartu worker).
+
 ### PATCH /users/:id
 
 Minimal satu dari `name`, `email`, `role`, `isActive`. Pengguna tidak dapat menonaktifkan atau mengubah role akunnya sendiri.
@@ -151,6 +153,10 @@ Klien mengirim `multipart/form-data`: `judul`, `kebutuhan`, `anggaran` (opsional
 ### GET /orders/:id
 
 Selain data pesanan, memuat `documents`, `invoices` beserta `payments`, dan `project` (`progres`, `progresBidang`). Catatan teknis tidak pernah ikut.
+
+### GET /projects dan GET /projects/:id
+
+Setiap project menyertakan `progres`, `progresBidang`, `kebutuhan`, dan `tenggatDiharapkan` dari pengajuan. `nilai` hanya untuk Operasional dan Marketing. Detail menambah `documents` dan `members` (tidak untuk Klien) serta `isPm` milik pengguna yang masuk.
 
 ### POST /orders/:id/invoices
 

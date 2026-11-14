@@ -11,6 +11,24 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (persiapan deploy)
+
+### Ditambah
+- Panduan `docs/06-deploy.md` untuk VPS aaPanel dan Vercel.
+- `TRUST_PROXY` agar pembatas percobaan membaca IP pengunjung di belakang Nginx.
+- Skrip `npm run deploy` (pasang paket, build, migrasi).
+
+### Diubah
+- `FRONTEND_ORIGIN` boleh berisi beberapa alamat dipisah koma; alamat pertama dipakai untuk tautan di email.
+- `npm run build` ikut menjalankan `prisma generate`.
+
+## 2026-11-14 (halaman Operasional dan Tim)
+
+### Diubah
+- `GET /users` menyertakan `jumlahProject` (banyak project yang pernah diikuti) untuk kartu worker.
+- `GET /orders` menyertakan jumlah anggota proyek (`projects[]._count.members`) agar Operasional tahu pengajuan mana yang belum punya tim.
+- `GET /projects` dan `GET /projects/:id` menyertakan `tenggatDiharapkan` dari pengajuan sebagai acuan selama target selesai belum ditetapkan; detail juga memuat `documents`.
+
 ## 2026-11-14
 
 ### Ditambah

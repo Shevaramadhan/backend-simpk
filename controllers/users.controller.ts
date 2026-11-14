@@ -6,15 +6,16 @@ import { ok } from '../utils/response';
 import type { CreateUserInput, UpdateUserInput } from '../validators/users.validator';
 
 const publicFields = { id: true, name: true, email: true, role: true, isActive: true, createdAt: true };
+const listFields = { ...publicFields, _count: { select: { memberships: true } } };
 
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
     const users = await prisma.user.findMany({
       where: { role: { not: 'KLIEN' } },
-      select: publicFields,
+      select: listFields,
       orderBy: { name: 'asc' },
     });
-    ok(res, users);
+    ok(res, users.map(({ _count, ...user }) => ({ ...user, jumlahProject: _count.memberships })));
   } catch (error) {
     next(error);
   }

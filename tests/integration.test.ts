@@ -634,3 +634,23 @@ describe('masuk dengan Google', () => {
     assert.equal(await prisma.user.count({ where: { email: 'baru2@uji.test' } }), 0);
   });
 });
+
+describe('data untuk halaman Operasional dan Tim', () => {
+  test('daftar akun memuat jumlah project tiap worker', async () => {
+    const res = await api(tokens.operasional).get('/users');
+    const pm = res.body.data.find((u: { email: string }) => u.email === 'pm@uji.test');
+    assert.ok(pm.jumlahProject >= 1);
+    assert.equal(res.body.data.some((u: { passwordHash?: string }) => u.passwordHash), false);
+  });
+
+  test('detail project untuk tim memuat dokumen, untuk klien tanpa susunan tim', async () => {
+    const tim = await prisma.user.findUniqueOrThrow({ where: { email: 't@uji.test' } });
+    const membership = await prisma.projectMember.findFirstOrThrow({ where: { userId: tim.id } });
+    const res = await api(tokens.tim).get(`/projects/${membership.projectId}`);
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body.data.documents));
+    assert.ok(res.body.data.documents.length >= 1);
+    const orders = await api(tokens.operasional).get('/orders');
+    assert.ok(orders.body.data.some((o: { projects: { _count: { members: number } }[] }) => o.projects[0]?._count.members >= 1));
+  });
+});

@@ -23,7 +23,7 @@ const orderFields = {
   createdAt: true,
   client: { select: { id: true, namaInstansi: true } },
   service: { select: { id: true, nama: true } },
-  projects: { select: { id: true, status: true }, take: 1 },
+  projects: { select: { id: true, status: true, _count: { select: { members: true } } }, take: 1 },
 } satisfies Prisma.OrderSelect;
 
 // Isi halaman Payment dan Detail: dokumen, tagihan, dan progres proyek (tanpa catatan teknis).

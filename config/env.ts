@@ -15,7 +15,13 @@ export default {
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   port: Number(process.env.PORT) || 4000,
-  frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  // Boleh lebih dari satu, dipisah koma. Yang pertama dipakai untuk tautan di email.
+  frontendOrigins: (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+  // Jumlah proxy di depan API. Di VPS dengan Nginx aaPanel isi 1 agar pembatas percobaan membaca IP pengunjung.
+  trustProxy: Number(process.env.TRUST_PROXY) || 0,
   // Kosong berarti tombol Google di halaman masuk tidak aktif.
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   uploadDir: path.resolve(process.env.UPLOAD_DIR || 'uploads'),
