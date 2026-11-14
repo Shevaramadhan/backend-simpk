@@ -14,6 +14,14 @@ export const createInvoiceSchema = z.object({
   jatuhTempo: z.iso.date('Format tanggal tidak valid.').nullable().optional(),
 });
 
+export const updateInvoiceSchema = createInvoiceSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, 'Tidak ada data yang diubah.');
+
+export const cancelInvoiceSchema = z.object({
+  alasan: z.string({ error: 'Alasan pembatalan wajib diisi.' }).trim().min(5, 'Alasan pembatalan minimal 5 karakter.').max(255),
+});
+
 export const createPaymentSchema = z.object({
   jumlah: rupiah('Jumlah transfer'),
   tglTransfer: z.iso.date('Tanggal transfer wajib diisi.'),
@@ -30,5 +38,7 @@ export const verifyPaymentSchema = z
   });
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;
+export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>;
+export type CancelInvoiceInput = z.infer<typeof cancelInvoiceSchema>;
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
 export type VerifyPaymentInput = z.infer<typeof verifyPaymentSchema>;

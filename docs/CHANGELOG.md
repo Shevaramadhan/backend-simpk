@@ -11,6 +11,18 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (pengaturan dan perbaikan tagihan)
+
+### Ditambah
+- Tabel `pengaturan` (satu baris) untuk identitas dan rekening Neo Telemetri di tagihan: `GET /pengaturan` (semua pengguna yang masuk) dan `PUT /pengaturan` (Marketing). Selama belum disimpan, dikirim data contoh dengan `contoh: true` (B-35).
+- `PATCH /invoices/:id` (ubah keterangan, nominal, jatuh tempo) dan `POST /invoices/:id/batal` (status baru `DIBATALKAN` dengan alasan) untuk Marketing. Hanya bila belum ada bukti yang diterima atau sedang diperiksa; tagihan dibatalkan tidak dapat dibayar (B-36).
+- Migrasi `pengaturan_batal_tagihan`.
+
+## 2026-11-14 (tagihan cetak)
+
+### Diubah
+- `GET /orders/:id` menyertakan kontak klien (nama, email, WhatsApp, alamat) untuk tagihan cetak (FR-12, UC-16). Hak akses tidak berubah: klien lain tetap dijawab 404.
+
 ## 2026-11-14 (data demo)
 
 ### Ditambah

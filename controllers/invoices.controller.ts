@@ -5,7 +5,7 @@ import prisma from '../config/prisma';
 import { BUKTI, storeFile } from '../middlewares/upload.middleware';
 import ApiError from '../utils/ApiError';
 import { ok } from '../utils/response';
-import type { CreateInvoiceInput, CreatePaymentInput, VerifyPaymentInput } from '../validators/invoices.validator';
+import type { CancelInvoiceInput, CreateInvoiceInput, CreatePaymentInput, UpdateInvoiceInput, VerifyPaymentInput } from '../validators/invoices.validator';
 
 export const paymentFields = {
   id: true,
@@ -25,6 +25,7 @@ export const invoiceFields = {
   tglTerbit: true,
   jatuhTempo: true,
   status: true,
+  alasanBatal: true,
   payments: { select: paymentFields, orderBy: { createdAt: 'desc' } },
 } satisfies Prisma.InvoiceSelect;
 
@@ -59,6 +60,49 @@ export async function create(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// Tagihan hanya boleh diubah atau dibatalkan selama belum ada bukti yang diterima atau sedang diperiksa,
+// agar catatan keuangan yang sudah dikonfirmasi tidak berubah (B-36).
+async function editableInvoice(id: number) {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: { status: true, payments: { where: { statusVerifikasi: { in: ['DITERIMA', 'MENUNGGU_VERIFIKASI'] } }, select: { statusVerifikasi: true } } },
+  });
+  if (!invoice) throw new ApiError(404, 'Tagihan tidak ditemukan.');
+  if (invoice.status === 'DIBATALKAN') throw new ApiError(409, 'Tagihan ini sudah dibatalkan.');
+  if (invoice.status === 'LUNAS' || invoice.payments.some((p) => p.statusVerifikasi === 'DITERIMA')) {
+    throw new ApiError(409, 'Tagihan yang sudah dibayar tidak dapat diubah atau dibatalkan.');
+  }
+  if (invoice.payments.length) throw new ApiError(409, 'Periksa dulu bukti transfer yang masuk sebelum mengubah tagihan.');
+}
+
+export async function update(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = idParam(req, 'id', 'Tagihan');
+    await editableInvoice(id);
+    const { jatuhTempo, ...data } = req.body as UpdateInvoiceInput;
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: { ...data, jatuhTempo: jatuhTempo === undefined ? undefined : jatuhTempo ? new Date(jatuhTempo) : null },
+      select: invoiceFields,
+    });
+    ok(res, invoice, 'Tagihan diperbarui.');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function cancel(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = idParam(req, 'id', 'Tagihan');
+    await editableInvoice(id);
+    const { alasan } = req.body as CancelInvoiceInput;
+    const invoice = await prisma.invoice.update({ where: { id }, data: { status: 'DIBATALKAN', alasanBatal: alasan }, select: invoiceFields });
+    ok(res, invoice, 'Tagihan dibatalkan.');
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
     const invoices = await prisma.invoice.findMany({
@@ -85,6 +129,7 @@ export async function pay(req: Request, res: Response, next: NextFunction) {
     });
     if (!invoice) throw new ApiError(404, 'Tagihan tidak ditemukan.');
     if (invoice.status === 'LUNAS') throw new ApiError(409, 'Tagihan ini sudah lunas.');
+    if (invoice.status === 'DIBATALKAN') throw new ApiError(409, 'Tagihan ini sudah dibatalkan.');
     if (invoice.payments.length) throw new ApiError(409, 'Bukti sebelumnya masih diperiksa Marketing.');
     if (!req.file) throw new ApiError(400, 'Data yang dikirim tidak valid.', { bukti: ['Unggah bukti transfer.'] });
 

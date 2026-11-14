@@ -29,6 +29,7 @@ async function makeUser(email: string, role: Role) {
 }
 
 async function clean() {
+  await prisma.pengaturan.deleteMany();
   await prisma.passwordReset.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.invoice.deleteMany();
@@ -688,6 +689,70 @@ describe('masuk dengan Google', () => {
     belum.mock.restore();
     assert.equal((await masuk()).status, 401);
     assert.equal(await prisma.user.count({ where: { email: 'baru2@uji.test' } }), 0);
+  });
+});
+
+describe('pengaturan dan perbaikan tagihan', () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const rekening = { nama: 'UKM Neo Telemetri', alamat: 'Universitas Andalas, Padang', telepon: '081200001111', email: 'neo@uji.test', bank: 'Bank Uji', nomorRekening: '111-222-333', atasNama: 'Neo Telemetri' };
+
+  async function tagihanBaru() {
+    const order = await api(tokens.klienA).post('/orders').send({ judul: 'Project Tagihan', kebutuhan: 'Kebutuhan untuk uji tagihan.' });
+    await api(tokens.marketing).post(`/orders/${order.body.data.id}/approve`).send({ nilaiDisepakati: 4000000 });
+    const invoice = await api(tokens.marketing).post(`/orders/${order.body.data.id}/invoices`).send({ keterangan: 'DP 50%', total: 2000000 });
+    return invoice.body.data.id as number;
+  }
+  const bayar = (id: number) => api(tokens.klienA).post(`/invoices/${id}/payments`).field('jumlah', '2000000').field('tglTransfer', '2026-11-14').attach('bukti', PNG, 'bukti.png');
+
+  test('pengaturan berisi contoh sampai Marketing menyimpan data resmi', async () => {
+    const awal = await api(tokens.klienA).get('/pengaturan');
+    assert.equal(awal.status, 200);
+    assert.equal(awal.body.data.contoh, true);
+    assert.equal((await api(tokens.klienA).put('/pengaturan').send(rekening)).status, 403);
+    assert.equal((await api(tokens.operasional).put('/pengaturan').send(rekening)).status, 403);
+    assert.equal((await api(tokens.marketing).put('/pengaturan').send({ ...rekening, nomorRekening: 'abc' })).status, 400);
+    const simpan = await api(tokens.marketing).put('/pengaturan').send(rekening);
+    assert.equal(simpan.status, 200);
+    const baru = await api(tokens.klienA).get('/pengaturan');
+    assert.equal(baru.body.data.contoh, false);
+    assert.equal(baru.body.data.nomorRekening, '111-222-333');
+    assert.equal(await prisma.pengaturan.count(), 1);
+  });
+
+  test('tagihan dapat diubah dan dibatalkan sebelum ada pembayaran', async () => {
+    const id = await tagihanBaru();
+    assert.equal((await api(tokens.klienA).patch(`/invoices/${id}`).send({ total: 1 })).status, 403);
+    const ubah = await api(tokens.marketing).patch(`/invoices/${id}`).send({ total: 2500000, keterangan: 'DP 60%', jatuhTempo: '2026-12-01' });
+    assert.equal(ubah.status, 200);
+    assert.equal(Number(ubah.body.data.total), 2500000);
+    assert.equal((await api(tokens.marketing).post(`/invoices/${id}/batal`).send({ alasan: 'x' })).status, 400);
+    const batal = await api(tokens.marketing).post(`/invoices/${id}/batal`).send({ alasan: 'Salah nominal, diterbitkan ulang.' });
+    assert.equal(batal.body.data.status, 'DIBATALKAN');
+    assert.equal(batal.body.data.alasanBatal, 'Salah nominal, diterbitkan ulang.');
+    assert.equal((await bayar(id)).status, 409);
+    assert.equal((await api(tokens.marketing).patch(`/invoices/${id}`).send({ total: 1000 })).status, 409);
+  });
+
+  test('tagihan dengan bukti diperiksa atau sudah lunas tidak dapat diubah', async () => {
+    const id = await tagihanBaru();
+    assert.equal((await bayar(id)).status, 201);
+    assert.equal((await api(tokens.marketing).patch(`/invoices/${id}`).send({ total: 1000 })).status, 409);
+    assert.equal((await api(tokens.marketing).post(`/invoices/${id}/batal`).send({ alasan: 'Coba batalkan.' })).status, 409);
+    const payment = await prisma.payment.findFirstOrThrow({ where: { invoiceId: id } });
+    await api(tokens.marketing).patch(`/payments/${payment.id}`).send({ status: 'DITERIMA' });
+    assert.equal((await api(tokens.marketing).post(`/invoices/${id}/batal`).send({ alasan: 'Coba batalkan.' })).status, 409);
+  });
+});
+
+describe('tagihan cetak', () => {
+  test('detail pesanan memuat kontak klien untuk tagihan, tetap tertutup bagi klien lain', async () => {
+    const order = await prisma.order.findFirstOrThrow({ where: { clientId: klienAId } });
+    const res = await api(tokens.klienA).get(`/orders/${order.id}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.client.user.email, 'a@uji.test');
+    assert.ok('noWhatsapp' in res.body.data.client);
+    assert.ok(!('passwordHash' in res.body.data.client.user));
+    assert.equal((await api(tokens.klienB).get(`/orders/${order.id}`)).status, 404);
   });
 });
 

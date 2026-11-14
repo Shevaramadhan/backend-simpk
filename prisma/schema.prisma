@@ -57,6 +57,7 @@ enum InvoiceStatus {
   DRAF
   DITERBITKAN
   LUNAS
+  DIBATALKAN
 }
 
 enum PaymentStatus {
@@ -93,6 +94,22 @@ model User {
   passwordResets   PasswordReset[]
 
   @@map("users")
+}
+
+// Identitas dan rekening Neo Telemetri untuk tagihan (FR-12). Satu baris (id = 1), diubah Marketing di halaman Pengaturan.
+model Pengaturan {
+  id            Int      @id @default(1)
+  nama          String   @db.VarChar(160)
+  alamat        String   @db.VarChar(255)
+  telepon       String   @db.VarChar(40)
+  email         String   @db.VarChar(191)
+  bank          String   @db.VarChar(80)
+  nomorRekening String   @map("nomor_rekening") @db.VarChar(40)
+  atasNama      String   @map("atas_nama") @db.VarChar(120)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  updatedById   Int?     @map("updated_by_id")
+
+  @@map("pengaturan")
 }
 
 // Hanya hash token yang disimpan, sehingga isi database tidak dapat dipakai untuk mereset akun.
@@ -288,6 +305,8 @@ model Invoice {
   tglTerbit    DateTime      @default(now()) @map("tgl_terbit")
   jatuhTempo   DateTime?     @map("jatuh_tempo") @db.Date
   status       InvoiceStatus @default(DITERBITKAN)
+  /// Diisi saat Marketing membatalkan tagihan (salah terbit); tagihan tidak dihapus agar riwayat keuangan utuh.
+  alasanBatal  String?       @map("alasan_batal") @db.VarChar(255)
   createdAt    DateTime      @default(now()) @map("created_at")
 
   order    Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)

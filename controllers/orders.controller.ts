@@ -31,6 +31,8 @@ const orderFields = {
 // Isi halaman Payment dan Detail: dokumen, tagihan, dan progres proyek (tanpa catatan teknis).
 const detailFields = {
   ...orderFields,
+  // Data kontak klien untuk tagihan cetak (FR-12, UC-16); hanya untuk pemilik pesanan dan pengurus.
+  client: { select: { id: true, namaInstansi: true, noWhatsapp: true, alamat: true, user: { select: { name: true, email: true } } } },
   documents: { select: { id: true, namaFile: true, mime: true, ukuran: true }, orderBy: { id: 'asc' } },
   invoices: { select: invoiceFields, orderBy: { createdAt: 'asc' } },
   projects: {

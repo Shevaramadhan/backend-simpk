@@ -120,6 +120,14 @@ Tautan salah, kedaluwarsa, atau sudah dipakai dijawab `400`.
 
 Untuk email yang salah ketik saat mendaftar. Tautan reset yang belum dipakai ikut dibatalkan. `PATCH /users/:id` melakukan hal yang sama untuk akun internal.
 
+### GET /pengaturan dan PUT /pengaturan
+
+Identitas dan rekening Neo Telemetri untuk tagihan: `nama`, `alamat`, `telepon`, `email`, `bank`, `nomorRekening`, `atasNama`. `GET` untuk semua pengguna yang masuk; bila belum pernah disimpan berisi data contoh dengan `contoh: true`. `PUT` khusus Marketing.
+
+### PATCH /invoices/:id dan POST /invoices/:id/batal
+
+Marketing mengubah `keterangan`, `total`, `jatuhTempo`, atau membatalkan dengan `alasan` (minimal 5 karakter). Ditolak 409 bila tagihan sudah lunas, sudah dibatalkan, atau ada bukti yang sedang diperiksa. Tagihan berstatus `DIBATALKAN` tidak menerima bukti transfer.
+
 ### GET /dashboard
 
 Marketing dan Operasional. Mengembalikan `requestMasuk` (status Baru dan Ditinjau), `projekMasuk` (Disetujui dan Menjadi Proyek), `projekSelesai`, `keuntungan` (total pembayaran berstatus Diterima), `buktiMenunggu`, dan `bulanan` (8 bulan terakhir: `request`, `projek`, `selesai`, `pemasukan`). Bulan selesai memakai waktu perubahan terakhir proyek karena belum ada kolom tanggal selesai.
@@ -164,7 +172,7 @@ Klien mengirim `multipart/form-data`: `judul`, `kebutuhan`, `anggaran` (opsional
 
 ### GET /orders/:id
 
-Selain data pesanan, memuat `documents`, `invoices` beserta `payments`, dan `project` (`progres`, `progresBidang`). Catatan teknis tidak pernah ikut.
+Selain data pesanan, memuat `documents`, `invoices` beserta `payments`, `project` (`progres`, `progresBidang`, `review`), dan `client` lengkap dengan `noWhatsapp`, `alamat`, serta `user` (nama dan email) untuk tagihan cetak. Catatan teknis tidak pernah ikut.
 
 ### GET /projects dan GET /projects/:id
 
