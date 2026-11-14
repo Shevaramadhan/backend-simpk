@@ -139,7 +139,11 @@ async function isi() {
     for (const nama of o.dokumen ?? []) {
       const ext = nama.endsWith('.png') ? 'png' : 'pdf';
       const berkas = await simpan('dokumen', ext, ext === 'png' ? PNG : pdf(nama));
-      await prisma.orderDocument.create({ data: { orderId: order.id, namaFile: nama, path: berkas.path, mime: ext === 'png' ? 'image/png' : 'application/pdf', ukuran: berkas.ukuran } });
+      // Dokumen pengajuan diunggah klien pemilik pesanan.
+      const { userId } = await prisma.client.findUniqueOrThrow({ where: { id: o.klien }, select: { userId: true } });
+      await prisma.orderDocument.create({
+        data: { orderId: order.id, namaFile: nama, path: berkas.path, mime: ext === 'png' ? 'image/png' : 'application/pdf', ukuran: berkas.ukuran, uploadedById: userId },
+      });
     }
     for (const t of o.tagihan ?? []) {
       const lunas = t.bayar?.status === 'DITERIMA';

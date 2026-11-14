@@ -68,3 +68,47 @@ test('progres proyek adalah rata-rata berbobot dan dihitung per bidang', () => {
   ]);
   assert.deepEqual(bidang, { UI_UX: 100, FRONTEND: null, BACKEND: 70, INTEGRASI: null });
 });
+
+// Dokumentasi API (OpenAPI) harus mengikuti rute yang benar-benar ada dan aman dibuka publik.
+type Layer = { route?: { path: string; methods: Record<string, boolean> }; name: string; handle: { stack?: Layer[] }; regexp: RegExp & { fast_slash?: boolean } };
+
+function daftarRute(stack: Layer[], prefix = ''): string[] {
+  return stack.flatMap((layer) => {
+    if (layer.route) {
+      const full = `${prefix}${layer.route.path}`.replace(/(.)\/$/, '$1').replace(/:(\w+)/g, '{$1}');
+      return Object.keys(layer.route.methods).map((method) => `${method.toUpperCase()} ${full}`);
+    }
+    if (layer.name === 'router' && layer.handle.stack) {
+      // Express 4 menyimpan prefiks mount sebagai regex, misalnya ^\/auth\/?(?=\/|$).
+      const mount = layer.regexp.fast_slash ? '' : layer.regexp.source.replace('^\\', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g, '/');
+      return daftarRute(layer.handle.stack, prefix + mount);
+    }
+    return [];
+  });
+}
+
+test('setiap rute API tercatat di openapi.yaml dan sebaliknya', async () => {
+  const { default: routes } = await import('../routes');
+  const { openApiSpec } = await import('../config/apiDocs');
+  const diKode = new Set(daftarRute((routes as unknown as { stack: Layer[] }).stack));
+  const paths = openApiSpec.paths as Record<string, Record<string, unknown>>;
+  const diSpec = new Set(Object.entries(paths).flatMap(([p, ops]) => Object.keys(ops).filter((m) => m !== 'parameters').map((m) => `${m.toUpperCase()} ${p}`)));
+  assert.deepEqual([...diKode].filter((r) => !diSpec.has(r)), [], 'rute belum didokumentasikan');
+  assert.deepEqual([...diSpec].filter((r) => !diKode.has(r)), [], 'dokumentasi untuk rute yang tidak ada');
+});
+
+test('dokumentasi publik hanya untuk dibaca dan tidak menyimpan token', async () => {
+  const halaman = await request(app).get('/api/v1/docs/');
+  assert.equal(halaman.status, 200);
+  assert.ok(halaman.headers['content-security-policy'], 'header keamanan Helmet tetap berlaku');
+  assert.equal(halaman.headers['cache-control'], 'no-store');
+  const init = await request(app).get('/api/v1/docs/swagger-ui-init.js');
+  assert.equal(init.status, 200);
+  assert.match(init.text, /"supportedSubmitMethods":\s*\[\]/);
+  assert.match(init.text, /"persistAuthorization":\s*false/);
+  const spec = await request(app).get('/api/v1/openapi.json');
+  assert.equal(spec.status, 200);
+  // Tidak boleh ada token JWT atau isi rahasia di spesifikasi.
+  assert.doesNotMatch(spec.text, /eyJ[A-Za-z0-9_-]{10,}\./);
+  assert.doesNotMatch(spec.text, /JWT_SECRET|SEED_PASSWORD|DATABASE_URL/);
+});

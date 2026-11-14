@@ -48,6 +48,7 @@ Buka `.env` lewat **Files** aaPanel. Nilai rahasia diisi langsung di VPS dan tid
 | `PORT` | `4000` |
 | `FRONTEND_ORIGIN` | Alamat Vercel, misalnya `https://simpk.vercel.app`. Bila nanti ada domain sendiri, tambahkan dengan koma; alamat pertama dipakai untuk tautan di email |
 | `TRUST_PROXY` | `1` |
+| `DOCS_TRY_IT` | Kosongkan atau `false`. Dokumentasi API di `https://api.domain-anda/api/v1/docs` tetap dapat dibaca publik tanpa fitur mencoba endpoint |
 | `UPLOAD_DIR` | `/www/wwwroot/simpk-data/uploads` |
 | `SEED_PASSWORD` | Kata sandi akun contoh, hanya bila seed dijalankan |
 | `SMTP_*`, `MAIL_FROM` | Akun email pengirim. Tanpa ini tautan lupa kata sandi tidak terkirim |

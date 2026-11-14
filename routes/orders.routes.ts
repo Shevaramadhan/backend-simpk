@@ -15,6 +15,8 @@ router.use(auth);
 router.post('/', authorize('KLIEN', 'MARKETING'), uploadMany('dokumen', DOKUMEN), validate(createOrderSchema), controller.create);
 router.get('/', authorize('KLIEN', 'MARKETING', 'OPERASIONAL'), controller.list);
 router.get('/:id', authorize('KLIEN', 'MARKETING', 'OPERASIONAL'), controller.detail);
+router.post('/:id/documents', authorize('KLIEN', 'MARKETING'), uploadMany('dokumen', DOKUMEN), controller.addDocuments);
+router.delete('/:id/documents/:docId', authorize('KLIEN', 'MARKETING'), controller.removeDocument);
 router.patch('/:id/status', authorize('MARKETING'), validate(updateOrderStatusSchema), controller.updateStatus);
 router.post('/:id/approve', authorize('MARKETING'), validate(approveOrderSchema), controller.approve);
 router.post('/:id/invoices', authorize('MARKETING'), validate(createInvoiceSchema), invoices.create);

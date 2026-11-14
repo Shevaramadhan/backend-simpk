@@ -11,6 +11,21 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-15 (dokumentasi API Swagger)
+
+### Ditambah
+- Spesifikasi OpenAPI 3 `docs/openapi.yaml` untuk ke-57 endpoint (role, isi request, kode respons, aturan bisnis), ditayangkan dengan Swagger UI di `/api/v1/docs` dan `/api/v1/openapi.json` (`config/apiDocs.ts`).
+- Aman dibuka publik: mode baca saja secara bawaan (Try it out dan Authorize disembunyikan, `supportedSubmitMethods` kosong), `persistAuthorization` mati sehingga token tidak tersimpan di peramban, `Cache-Control: no-store`, dan header keamanan Helmet tetap berlaku. `DOCS_TRY_IT=true` hanya untuk pengembangan.
+- Smoke test: setiap rute di kode wajib ada di spesifikasi dan sebaliknya; halaman bawaan wajib mode baca saja; spesifikasi tidak boleh memuat token atau nama variabel rahasia.
+
+## 2026-11-15 (dokumen pendukung tambahan)
+
+### Ditambah
+- Kolom `order_documents.uploaded_by_id` (pengunggah dokumen); dokumen lama diisi akun klien pemilik pesanan lewat migrasi `pengunggah_dokumen` (B-37).
+- `POST /orders/:id/documents` (multipart `dokumen`, maksimal 5 per kirim dan 10 per pesanan): klien selama pengajuan Baru atau Ditinjau, Marketing selama pesanan belum ditolak atau dibatalkan.
+- `DELETE /orders/:id/documents/:docId`: hanya pengunggah; klien hanya selama pengajuan belum diterima.
+- Daftar dokumen pada detail pesanan dan detail proyek menyertakan `uploadedBy` (nama dan role).
+
 ## 2026-11-14 (pengaturan dan perbaikan tagihan)
 
 ### Ditambah

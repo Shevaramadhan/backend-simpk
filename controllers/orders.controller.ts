@@ -10,6 +10,19 @@ import { ok } from '../utils/response';
 import type { ApproveOrderInput, CreateOrderInput, UpdateOrderStatusInput } from '../validators/orders.validator';
 import { invoiceFields } from './invoices.controller';
 
+// Dokumen pendukung beserta pengunggahnya; dipakai detail pesanan dan detail proyek.
+export const documentFields = {
+  id: true,
+  namaFile: true,
+  mime: true,
+  ukuran: true,
+  createdAt: true,
+  uploadedById: true,
+  uploadedBy: { select: { name: true, role: true } },
+} satisfies Prisma.OrderDocumentSelect;
+
+const MAX_DOKUMEN = 10;
+
 const orderFields = {
   id: true,
   nomor: true,
@@ -33,7 +46,7 @@ const detailFields = {
   ...orderFields,
   // Data kontak klien untuk tagihan cetak (FR-12, UC-16); hanya untuk pemilik pesanan dan pengurus.
   client: { select: { id: true, namaInstansi: true, noWhatsapp: true, alamat: true, user: { select: { name: true, email: true } } } },
-  documents: { select: { id: true, namaFile: true, mime: true, ukuran: true }, orderBy: { id: 'asc' } },
+  documents: { select: documentFields, orderBy: { id: 'asc' } },
   invoices: { select: invoiceFields, orderBy: { createdAt: 'asc' } },
   projects: {
     select: {
@@ -105,7 +118,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
         clientId: ownerId,
         serviceId: serviceId ?? null,
         tenggatDiharapkan: tenggatDiharapkan ? new Date(tenggatDiharapkan) : null,
-        documents: { create: stored },
+        documents: { create: stored.map((file) => ({ ...file, uploadedById: req.user!.id })) },
       },
       select: orderFields,
     });
@@ -113,6 +126,58 @@ export async function create(req: Request, res: Response, next: NextFunction) {
   } catch (error) {
     // Berkas yang sudah tersimpan dihapus lagi bila pengajuan gagal.
     await Promise.all(stored.map((file) => unlink(resolveStored(file.path)).catch(() => {})));
+    next(error);
+  }
+}
+
+// Klien menambah dokumen selama pengajuan belum diterima; Marketing (misalnya MoU) selama pesanan belum ditolak atau dibatalkan.
+export async function addDocuments(req: Request, res: Response, next: NextFunction) {
+  const stored: StoredFile[] = [];
+  try {
+    const id = idParam(req);
+    const order = await prisma.order.findFirst({
+      where: { id, ...(await visibleWhere(req.user!)) },
+      select: { status: true, _count: { select: { documents: true } } },
+    });
+    if (!order) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+    const isKlien = req.user!.role === 'KLIEN';
+    if (isKlien && order.status !== 'BARU' && order.status !== 'DITINJAU') {
+      throw new ApiError(409, 'Dokumen hanya dapat ditambah selama pengajuan belum diterima.');
+    }
+    if (order.status === 'DITOLAK' || order.status === 'DIBATALKAN') throw new ApiError(409, 'Pesanan ini sudah ditutup.');
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+    if (!files.length) throw new ApiError(400, 'Data yang dikirim tidak valid.', { dokumen: ['Pilih minimal satu berkas.'] });
+    if (order._count.documents + files.length > MAX_DOKUMEN) {
+      throw new ApiError(400, 'Data yang dikirim tidak valid.', { dokumen: [`Maksimal ${MAX_DOKUMEN} dokumen per pesanan.`] });
+    }
+    for (const file of files) stored.push(await storeFile(file, DOKUMEN, 'dokumen'));
+    await prisma.orderDocument.createMany({ data: stored.map((file) => ({ ...file, orderId: id, uploadedById: req.user!.id })) });
+    ok(res, await prisma.orderDocument.findMany({ where: { orderId: id }, select: documentFields, orderBy: { id: 'asc' } }), 'Dokumen ditambahkan.', 201);
+  } catch (error) {
+    await Promise.all(stored.map((file) => unlink(resolveStored(file.path)).catch(() => {})));
+    next(error);
+  }
+}
+
+// Hanya pengunggah yang dapat menghapus dokumennya; klien hanya selama pengajuan belum diterima.
+export async function removeDocument(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = idParam(req);
+    const docId = Number(req.params.docId);
+    if (!Number.isInteger(docId)) throw new ApiError(404, 'Dokumen tidak ditemukan.');
+    const doc = await prisma.orderDocument.findFirst({
+      where: { id: docId, orderId: id, order: await visibleWhere(req.user!) },
+      select: { path: true, uploadedById: true, order: { select: { status: true } } },
+    });
+    if (!doc) throw new ApiError(404, 'Dokumen tidak ditemukan.');
+    if (doc.uploadedById !== req.user!.id) throw new ApiError(403, 'Anda hanya dapat menghapus dokumen yang Anda unggah.');
+    if (req.user!.role === 'KLIEN' && doc.order.status !== 'BARU' && doc.order.status !== 'DITINJAU') {
+      throw new ApiError(409, 'Dokumen tidak dapat dihapus setelah pengajuan diterima.');
+    }
+    await prisma.orderDocument.delete({ where: { id: docId } });
+    await unlink(resolveStored(doc.path)).catch(() => {});
+    ok(res, null, 'Dokumen dihapus.');
+  } catch (error) {
     next(error);
   }
 }

@@ -4,6 +4,7 @@ import type { NextFunction, Request, Response } from 'express';
 import prisma from '../config/prisma';
 import ApiError from '../utils/ApiError';
 import { progressByBidang, projectProgress } from '../utils/progress';
+import { documentFields } from './orders.controller';
 import { ok } from '../utils/response';
 import type { CreateProjectInput, ReplaceMembersInput, UpdateProjectInput } from '../validators/projects.validator';
 
@@ -88,7 +89,7 @@ export async function detail(req: Request, res: Response, next: NextFunction) {
     });
     const documents = await prisma.orderDocument.findMany({
       where: { orderId: project.order.id },
-      select: { id: true, namaFile: true, mime: true, ukuran: true },
+      select: documentFields,
       orderBy: { id: 'asc' },
     });
     const { members, ...rest } = project;

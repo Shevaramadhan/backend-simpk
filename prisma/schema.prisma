@@ -90,6 +90,7 @@ model User {
   progressUpdates  ProgressUpdate[]
   verifiedPayments Payment[]        @relation("PaymentVerifier")
   issuedInvoices   Invoice[]        @relation("InvoiceIssuer")
+  uploadedDocuments OrderDocument[] @relation("DocumentUploader")
   notifications    Notification[]
   passwordResets   PasswordReset[]
 
@@ -209,11 +210,15 @@ model OrderDocument {
   path      String   @db.VarChar(255)
   mime      String   @db.VarChar(100)
   ukuran    Int
+  /// Pengunggah: klien saat pengajuan atau sesudahnya, atau Marketing (misalnya MoU). B-37.
+  uploadedById Int?   @map("uploaded_by_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([orderId])
+  @@index([uploadedById])
   @@map("order_documents")
 }
 

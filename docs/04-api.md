@@ -2,6 +2,8 @@
 
 Alamat dasar: `/api/v1`. Format respons ada di [01-ketentuan.md](01-ketentuan.md). Rute terlindungi memakai header `Authorization: Bearer <token>`.
 
+Dokumentasi interaktif (Swagger, OpenAPI 3) ada di `/api/v1/docs` dengan sumber [openapi.yaml](openapi.yaml). Berkas ini mencatat aturan bisnis dan keputusan di balik tiap endpoint.
+
 ## Sudah tersedia
 
 Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak, `404` tidak ditemukan, `409` data sudah terdaftar.
@@ -119,6 +121,10 @@ Tautan salah, kedaluwarsa, atau sudah dipakai dijawab `400`.
 ```
 
 Untuk email yang salah ketik saat mendaftar. Tautan reset yang belum dipakai ikut dibatalkan. `PATCH /users/:id` melakukan hal yang sama untuk akun internal.
+
+### POST /orders/:id/documents dan DELETE /orders/:id/documents/:docId
+
+Menambah dokumen pendukung (`multipart/form-data`, kolom `dokumen`, PDF/PNG/JPG/DOCX maksimal 5 MB, 5 berkas per kirim, 10 per pesanan). Klien pemilik hanya selama pesanan berstatus Baru atau Ditinjau; Marketing selama pesanan belum Ditolak atau Dibatalkan (misalnya MoU atau berita acara). Hapus hanya oleh pengunggahnya; klien hanya selama pengajuan belum diterima.
 
 ### GET /pengaturan dan PUT /pengaturan
 

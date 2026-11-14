@@ -22,6 +22,8 @@ export default {
     .filter(Boolean),
   // Jumlah proxy di depan API. Di VPS dengan Nginx aaPanel isi 1 agar pembatas percobaan membaca IP pengunjung.
   trustProxy: Number(process.env.TRUST_PROXY) || 0,
+  // true hanya di pengembangan: mengaktifkan Try it out di /api/v1/docs. Bawaan mati agar dokumentasi publik hanya untuk dibaca.
+  docsTryIt: process.env.DOCS_TRY_IT === 'true',
   // Kosong berarti tombol Google di halaman masuk tidak aktif.
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   uploadDir: path.resolve(process.env.UPLOAD_DIR || 'uploads'),

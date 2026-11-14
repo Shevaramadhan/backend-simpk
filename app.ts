@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { apiDocsRouter } from './config/apiDocs';
 import env from './config/env';
 import { errorHandler, notFound } from './middlewares/error.middleware';
 import routes from './routes';
@@ -11,6 +12,7 @@ app.use(helmet());
 app.use(cors({ origin: env.frontendOrigins }));
 app.use(express.json({ limit: '1mb' }));
 
+app.use('/api/v1', apiDocsRouter());
 app.use('/api/v1', routes);
 
 app.use(notFound);

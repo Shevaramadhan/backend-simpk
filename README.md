@@ -47,6 +47,12 @@ npm run db:demo:hapus    # hapus data demo saja
 
 Isinya 12 pengajuan di semua status (baru, diskusi, diterima menunggu tim, dikerjakan, selesai dengan dan tanpa ulasan, ditolak, dibatalkan), tagihan dengan bukti menunggu, diterima, dan ditolak, 6 worker dengan keahlian berbeda, dan 5 klien dummy. Sebagian dikaitkan ke `klien@contoh.test` dan `tim@contoh.test` agar langsung terlihat. Data demo ditandai nomor berawalan `DEMO-` dan email `@demo.test`, kata sandinya `SEED_PASSWORD`. Hapus data demo sebelum sistem dipakai resmi.
 
+## Dokumentasi API (Swagger)
+
+Buka `/api/v1/docs` (misalnya `http://localhost:4000/api/v1/docs`) atau unduh spesifikasinya di `/api/v1/openapi.json`. Sumbernya `docs/openapi.yaml`.
+
+Secara bawaan halaman ini hanya untuk dibaca: tombol Try it out dan Authorize tidak tampil, sehingga tidak ada tempat mengetik token di halaman publik, dan token tidak pernah disimpan di peramban. Untuk mencoba endpoint dari laptop, isi `DOCS_TRY_IT=true` di `.env` lokal. Di VPS biarkan kosong atau `false`.
+
 ## Tes
 
 ```bash
@@ -56,6 +62,6 @@ npm test
 
 ## Menambah modul
 
-Buat `routes/<nama>.routes.ts`, `controllers/<nama>.controller.ts`, dan `validators/<nama>.validator.ts`, lalu daftarkan di `routes/index.ts`.
+Buat `routes/<nama>.routes.ts`, `controllers/<nama>.controller.ts`, dan `validators/<nama>.validator.ts`, lalu daftarkan di `routes/index.ts`. Setiap rute baru wajib dicatat di `docs/openapi.yaml`; `npm test` gagal bila ada rute yang belum didokumentasikan.
 
 Klien hanya boleh menerima `catatanKlien`. Pilih kolom secara eksplisit dan jangan pernah mengirim `catatanTeknis` pada endpoint klien.

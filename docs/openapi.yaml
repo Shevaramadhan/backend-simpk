@@ -1,0 +1,1054 @@
+openapi: 3.0.3
+info:
+  title: SIMPK Neo Telemetri API
+  version: 1.0.0
+  description: |
+    REST API Sistem Informasi Manajemen Proyek Klien (SIMPK) UKM Neo Telemetri Universitas Andalas.
+
+    **Format respons.** Berhasil: `{ "success": true, "message": "...", "data": ... }`.
+    Gagal: `{ "success": false, "message": "...", "errors": { "kolom": ["pesan"] } }` (`errors` hanya untuk kesalahan isian).
+
+    **Autentikasi.** Kirim token dari `POST /auth/login` sebagai `Authorization: Bearer <token>`. Token berlaku 8 jam.
+    Hak akses dicek di setiap endpoint menurut role (Marketing, Operasional, Tim, Klien) dan kepemilikan data.
+    Data milik pengguna lain dijawab **404** agar keberadaannya tidak terungkap.
+
+    **Catatan teknis tim tidak pernah dikirim ke Klien maupun Marketing.**
+
+    Halaman ini hanya untuk dibaca di server publik; fitur mencoba langsung hanya aktif di lingkungan pengembangan.
+servers:
+  - url: /api/v1
+tags:
+  - name: Umum
+  - name: Auth
+    description: Masuk, daftar, dan kata sandi
+  - name: Pengguna
+    description: Akun internal (Operasional)
+  - name: Klien
+  - name: Katalog
+    description: Daftar jasa dan portofolio
+  - name: Pesanan
+    description: Pengajuan project dan dokumen pendukung
+  - name: Tagihan
+    description: Tagihan dan pembayaran
+  - name: Proyek
+    description: Proyek, tim, tugas, dan progres
+  - name: Dashboard
+    description: Ringkasan, ulasan, dan pengaturan
+  - name: Berkas
+    description: Unduhan berkas berhak akses
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    projectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    taskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    docId:
+      name: docId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+  responses:
+    BadRequest:
+      description: Isian tidak valid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+          example: { success: false, message: Data yang dikirim tidak valid., errors: { email: [Format email tidak valid.] } }
+    Unauthorized:
+      description: Belum masuk, token tidak valid, atau akun nonaktif
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+    Forbidden:
+      description: Role tidak memiliki akses
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+    NotFound:
+      description: Data tidak ditemukan atau bukan milik pengguna
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+    Conflict:
+      description: Bertentangan dengan status data saat ini
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+    TooMany:
+      description: Terlalu banyak percobaan, coba lagi nanti
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Galat' }
+  schemas:
+    Sukses:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: Berhasil }
+        data: {}
+    Galat:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        errors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+    Role:
+      type: string
+      enum: [MARKETING, OPERASIONAL, TIM, KLIEN]
+    Pengguna:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+    HasilMasuk:
+      type: object
+      properties:
+        token: { type: string, description: JWT untuk header Authorization }
+        user: { $ref: '#/components/schemas/Pengguna' }
+    Jasa:
+      type: object
+      required: [nama, deskripsi, hargaMin, hargaMax, estimasiHari]
+      properties:
+        nama: { type: string, minLength: 3, maxLength: 160, example: Website Profil Organisasi }
+        deskripsi: { type: string, minLength: 10 }
+        hargaMin: { type: number, minimum: 0, example: 1500000 }
+        hargaMax: { type: number, minimum: 0, example: 3000000 }
+        estimasiHari: { type: integer, minimum: 1, example: 30 }
+        isVisible: { type: boolean, default: true }
+    Portofolio:
+      type: object
+      required: [judul, deskripsi]
+      properties:
+        serviceId: { type: integer, nullable: true }
+        judul: { type: string, minLength: 3, maxLength: 160 }
+        deskripsi: { type: string, minLength: 10 }
+        tahun: { type: integer, minimum: 2000, maximum: 2100, nullable: true }
+    StatusPesanan:
+      type: string
+      enum: [BARU, DITINJAU, DISETUJUI, DITOLAK, DIBATALKAN, MENJADI_PROYEK]
+    Dokumen:
+      type: object
+      properties:
+        id: { type: integer }
+        namaFile: { type: string }
+        mime: { type: string }
+        ukuran: { type: integer, description: byte }
+        createdAt: { type: string, format: date-time }
+        uploadedById: { type: integer, nullable: true }
+        uploadedBy:
+          type: object
+          nullable: true
+          properties:
+            name: { type: string }
+            role: { $ref: '#/components/schemas/Role' }
+    Tagihan:
+      type: object
+      properties:
+        id: { type: integer }
+        nomor: { type: string, example: INV-20261114-A1B2C3 }
+        keterangan: { type: string, example: DP 50% }
+        total: { type: string, example: '2500000.00' }
+        tglTerbit: { type: string, format: date-time }
+        jatuhTempo: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [DRAF, DITERBITKAN, LUNAS, DIBATALKAN] }
+        alasanBatal: { type: string, nullable: true }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/Pembayaran' }
+    Pembayaran:
+      type: object
+      properties:
+        id: { type: integer }
+        jumlah: { type: string }
+        tglTransfer: { type: string, format: date }
+        statusVerifikasi: { type: string, enum: [MENUNGGU_VERIFIKASI, DITERIMA, DITOLAK] }
+        alasanDitolak: { type: string, nullable: true }
+        verifiedAt: { type: string, format: date-time, nullable: true }
+    Bidang:
+      type: string
+      enum: [UI_UX, FRONTEND, BACKEND, INTEGRASI]
+    Anggota:
+      type: object
+      required: [userId, posisi]
+      properties:
+        userId: { type: integer }
+        posisi: { type: string, minLength: 2, maxLength: 60, example: Frontend Developer }
+        isPm: { type: boolean, default: false }
+    Tugas:
+      type: object
+      required: [judul, bidang]
+      properties:
+        judul: { type: string, minLength: 3, maxLength: 200 }
+        deskripsi: { type: string, maxLength: 5000, nullable: true }
+        assigneeId: { type: integer, nullable: true, description: Harus anggota proyek }
+        tenggat: { type: string, format: date, nullable: true }
+        prioritas: { type: string, enum: [RENDAH, SEDANG, TINGGI] }
+        bidang: { $ref: '#/components/schemas/Bidang' }
+        bobot: { type: integer, minimum: 1, maximum: 10, default: 1, description: Pengaruh tugas terhadap progres bidangnya }
+    Pengaturan:
+      type: object
+      required: [nama, alamat, telepon, email, bank, nomorRekening, atasNama]
+      properties:
+        nama: { type: string, example: UKM Neo Telemetri Universitas Andalas }
+        alamat: { type: string }
+        telepon: { type: string, example: '+62 812 0000 0000' }
+        email: { type: string, format: email }
+        bank: { type: string, example: Bank Contoh }
+        nomorRekening: { type: string, example: '0000 0000 0000' }
+        atasNama: { type: string }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Umum]
+      summary: Cek API berjalan
+      security: []
+      responses:
+        '200': { description: API berjalan }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Masuk dengan email dan kata sandi
+      description: Dibatasi 10 percobaan per 15 menit per alamat IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: nama@contoh.test }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Berhasil masuk
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Sukses'
+                  - properties: { data: { $ref: '#/components/schemas/HasilMasuk' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Daftar akun Klien
+      description: Selalu membuat akun Klien walau mengirim role lain. Dibatasi 10 per jam per IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, noWhatsapp]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+                noWhatsapp: { type: string, example: '081200000000' }
+      responses:
+        '201': { description: Akun dibuat dan langsung masuk }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /auth/google:
+    post:
+      tags: [Auth]
+      summary: Masuk atau daftar dengan Google
+      description: ID token Google diperiksa ke Google. Email baru menjadi Klien; email terdaftar masuk sesuai role.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: string, description: ID token dari Google Identity Services }
+      responses:
+        '200': { description: Berhasil masuk }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Kirim tautan atur ulang kata sandi ke email
+      description: Selalu dijawab berhasil agar terdaftar atau tidaknya email tidak terungkap. Dibatasi 5 per 15 menit.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200': { description: Bila email terdaftar, tautan dikirim }
+        '429': { $ref: '#/components/responses/TooMany' }
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Atur kata sandi baru dari tautan email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, passwordBaru]
+              properties:
+                token: { type: string, description: 64 karakter heksadesimal dari tautan email }
+                passwordBaru: { type: string, format: password, minLength: 8 }
+      responses:
+        '200': { description: Kata sandi diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Data pengguna yang sedang masuk
+      responses:
+        '200': { description: Data pengguna }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Ganti kata sandi sendiri
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [passwordLama, passwordBaru]
+              properties:
+                passwordLama: { type: string, format: password }
+                passwordBaru: { type: string, format: password, minLength: 8 }
+      responses:
+        '200': { description: Kata sandi diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /users:
+    get:
+      tags: [Pengguna]
+      summary: Daftar akun internal
+      description: 'Role: Operasional. Termasuk jumlahProject dan keahlian (akun Tim). Tanpa passwordHash.'
+      responses:
+        '200': { description: Daftar akun }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Pengguna]
+      summary: Buat akun internal
+      description: 'Role: Operasional. Keahlian hanya disimpan untuk role Tim.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+                role: { type: string, enum: [MARKETING, OPERASIONAL, TIM] }
+                keahlian: { type: string, maxLength: 60, example: Frontend Developer }
+      responses:
+        '201': { description: Akun dibuat }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /users/{id}:
+    patch:
+      tags: [Pengguna]
+      summary: Ubah akun internal
+      description: 'Role: Operasional. Tidak dapat menonaktifkan atau mengubah role akun sendiri.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                role: { type: string, enum: [MARKETING, OPERASIONAL, TIM] }
+                isActive: { type: boolean }
+                keahlian: { type: string, maxLength: 60, nullable: true }
+      responses:
+        '200': { description: Akun diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /clients/me:
+    get:
+      tags: [Klien]
+      summary: Profil klien sendiri
+      description: 'Role: Klien.'
+      responses:
+        '200': { description: Profil }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Klien]
+      summary: Ubah profil sendiri
+      description: 'Role: Klien. Email dan status aktif tidak dapat diubah lewat endpoint ini.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                namaInstansi: { type: string }
+                jenisKlien: { type: string, example: Organisasi }
+                noWhatsapp: { type: string }
+                alamat: { type: string, nullable: true }
+      responses:
+        '200': { description: Profil diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /clients:
+    get:
+      tags: [Klien]
+      summary: Daftar klien
+      description: 'Role: Marketing, Operasional.'
+      responses:
+        '200': { description: Daftar klien }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /clients/{id}:
+    patch:
+      tags: [Klien]
+      summary: Ubah data atau status aktif klien
+      description: 'Role: Marketing. Menonaktifkan klien juga menonaktifkan akun login-nya.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                namaInstansi: { type: string }
+                jenisKlien: { type: string }
+                noWhatsapp: { type: string, nullable: true }
+                alamat: { type: string, nullable: true }
+                isActive: { type: boolean }
+      responses:
+        '200': { description: Data klien diperbarui }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /clients/{id}/email:
+    patch:
+      tags: [Klien]
+      summary: Perbaiki email klien
+      description: 'Role: Operasional. Tautan atur ulang kata sandi yang belum dipakai dibatalkan.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200': { description: Email diperbarui }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /services:
+    get:
+      tags: [Katalog]
+      summary: Daftar jasa yang ditampilkan
+      security: []
+      responses:
+        '200': { description: Daftar jasa publik }
+    post:
+      tags: [Katalog]
+      summary: Tambah jasa
+      description: 'Role: Marketing.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Jasa' }
+      responses:
+        '201': { description: Jasa dibuat }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /services/all:
+    get:
+      tags: [Katalog]
+      summary: Semua jasa termasuk yang disembunyikan
+      description: 'Role: Marketing.'
+      responses:
+        '200': { description: Daftar jasa }
+  /services/{id}:
+    put:
+      tags: [Katalog]
+      summary: Ubah jasa
+      description: 'Role: Marketing.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Jasa' }
+      responses:
+        '200': { description: Jasa diperbarui }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /portfolios:
+    get:
+      tags: [Katalog]
+      summary: Daftar portofolio publik
+      security: []
+      responses:
+        '200': { description: Daftar portofolio }
+    post:
+      tags: [Katalog]
+      summary: Tambah portofolio
+      description: 'Role: Marketing.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Portofolio' }
+      responses:
+        '201': { description: Portofolio dibuat }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /portfolios/all:
+    get:
+      tags: [Katalog]
+      summary: Semua portofolio
+      description: 'Role: Marketing.'
+      responses:
+        '200': { description: Daftar portofolio }
+  /portfolios/{id}:
+    put:
+      tags: [Katalog]
+      summary: Ubah portofolio
+      description: 'Role: Marketing.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Portofolio' }
+      responses:
+        '200': { description: Portofolio diperbarui }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Katalog]
+      summary: Hapus portofolio
+      description: 'Role: Marketing.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: Portofolio dihapus }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders:
+    get:
+      tags: [Pesanan]
+      summary: Daftar pesanan
+      description: 'Role: Klien (milik sendiri), Marketing, Operasional. Memuat tagihan ringkas dengan bukti yang menunggu diperiksa.'
+      responses:
+        '200': { description: Daftar pesanan }
+    post:
+      tags: [Pesanan]
+      summary: Ajukan project
+      description: |
+        Role: Klien (untuk dirinya sendiri; clientId diabaikan) atau Marketing (wajib clientId, boleh JSON).
+        Klien mengirim multipart dengan sampai 5 dokumen (PDF, PNG, JPG, DOCX, maksimal 5 MB). Jenis berkas diperiksa dari isinya.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [judul, kebutuhan]
+              properties:
+                judul: { type: string, minLength: 3, maxLength: 160 }
+                kebutuhan: { type: string, minLength: 10, maxLength: 5000 }
+                anggaran: { type: number, minimum: 0 }
+                tenggatDiharapkan: { type: string, format: date }
+                serviceId: { type: integer }
+                clientId: { type: integer, description: Hanya untuk Marketing }
+                dokumen: { type: array, items: { type: string, format: binary }, maxItems: 5 }
+      responses:
+        '201': { description: Pengajuan dikirim dengan status BARU }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /orders/{id}:
+    get:
+      tags: [Pesanan]
+      summary: Detail pesanan
+      description: 'Memuat dokumen, tagihan beserta pembayaran, ringkasan proyek (progres, progres per bidang, ulasan), dan kontak klien untuk tagihan cetak. Tanpa catatan teknis.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200': { description: Detail pesanan }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/{id}/documents:
+    post:
+      tags: [Pesanan]
+      summary: Tambah dokumen pendukung
+      description: 'Role: Klien pemilik selama status BARU atau DITINJAU; Marketing selama pesanan belum ditolak atau dibatalkan. Maksimal 5 per kirim dan 10 per pesanan.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [dokumen]
+              properties:
+                dokumen: { type: array, items: { type: string, format: binary }, maxItems: 5 }
+      responses:
+        '201':
+          description: Daftar dokumen terbaru
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Sukses'
+                  - properties: { data: { type: array, items: { $ref: '#/components/schemas/Dokumen' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /orders/{id}/documents/{docId}:
+    delete:
+      tags: [Pesanan]
+      summary: Hapus dokumen pendukung
+      description: Hanya pengunggahnya; klien hanya selama pengajuan belum diterima.
+      parameters: [{ $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/docId' }]
+      responses:
+        '200': { description: Dokumen dihapus }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /orders/{id}/status:
+    patch:
+      tags: [Pesanan]
+      summary: Ubah status pesanan
+      description: 'Role: Marketing. Urutan: BARU → DITINJAU, DITOLAK, DIBATALKAN; DITINJAU → DITOLAK, DIBATALKAN; DISETUJUI → DIBATALKAN. Alasan wajib bila ditolak.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [DITINJAU, DITOLAK, DIBATALKAN] }
+                alasanDitolak: { type: string, maxLength: 255 }
+      responses:
+        '200': { description: Status diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /orders/{id}/approve:
+    post:
+      tags: [Pesanan]
+      summary: Terima pesanan dengan nilai kesepakatan
+      description: 'Role: Marketing. Dari status BARU atau DITINJAU.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nilaiDisepakati]
+              properties:
+                nilaiDisepakati: { type: number, exclusiveMinimum: true, minimum: 0, example: 5000000 }
+      responses:
+        '200': { description: Pesanan disetujui }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /orders/{id}/invoices:
+    post:
+      tags: [Tagihan]
+      summary: Terbitkan tagihan
+      description: 'Role: Marketing. Untuk pesanan DISETUJUI atau MENJADI_PROYEK, misalnya DP lalu pelunasan.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keterangan, total]
+              properties:
+                keterangan: { type: string, example: DP 50% }
+                total: { type: number, example: 2500000 }
+                jatuhTempo: { type: string, format: date, nullable: true }
+      responses:
+        '201':
+          description: Tagihan diterbitkan
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Sukses'
+                  - properties: { data: { $ref: '#/components/schemas/Tagihan' } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /invoices:
+    get:
+      tags: [Tagihan]
+      summary: Daftar semua tagihan
+      description: 'Role: Marketing, Operasional.'
+      responses:
+        '200': { description: Daftar tagihan }
+  /invoices/{id}:
+    patch:
+      tags: [Tagihan]
+      summary: Ubah tagihan
+      description: 'Role: Marketing. Hanya bila belum ada bukti diterima atau sedang diperiksa.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keterangan: { type: string }
+                total: { type: number }
+                jatuhTempo: { type: string, format: date, nullable: true }
+      responses:
+        '200': { description: Tagihan diperbarui }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /invoices/{id}/batal:
+    post:
+      tags: [Tagihan]
+      summary: Batalkan tagihan
+      description: 'Role: Marketing. Tagihan tidak dihapus, berstatus DIBATALKAN dan tidak dapat dibayar. Hanya bila belum ada bukti diterima atau sedang diperiksa.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alasan]
+              properties:
+                alasan: { type: string, minLength: 5, maxLength: 255 }
+      responses:
+        '200': { description: Tagihan dibatalkan }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /invoices/{id}/payments:
+    post:
+      tags: [Tagihan]
+      summary: Unggah bukti transfer
+      description: 'Role: Klien pemilik. JPG, PNG, atau PDF maksimal 2 MB. Ditolak bila tagihan lunas, dibatalkan, atau bukti sebelumnya masih diperiksa.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [jumlah, tglTransfer, bukti]
+              properties:
+                jumlah: { type: number }
+                tglTransfer: { type: string, format: date }
+                bukti: { type: string, format: binary }
+      responses:
+        '201': { description: Bukti dikirim, menunggu verifikasi }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /payments/{id}:
+    patch:
+      tags: [Tagihan]
+      summary: Verifikasi bukti transfer
+      description: 'Role: Marketing. Diterima menandai tagihan lunas; ditolak wajib alasan dan klien dapat mengunggah ulang.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [DITERIMA, DITOLAK] }
+                alasanDitolak: { type: string, maxLength: 255 }
+      responses:
+        '200': { description: Pembayaran diperiksa }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /projects/my-tasks:
+    get:
+      tags: [Proyek]
+      summary: Tugas milik saya di semua proyek
+      description: 'Role: Tim.'
+      responses:
+        '200': { description: Daftar tugas }
+  /projects:
+    get:
+      tags: [Proyek]
+      summary: Daftar proyek yang dapat diakses
+      description: 'Tim hanya proyek yang diikuti; Klien hanya miliknya. Nilai proyek hanya untuk Marketing dan Operasional.'
+      responses:
+        '200': { description: Daftar proyek dengan progres dan progres per bidang }
+    post:
+      tags: [Proyek]
+      summary: Bentuk proyek dari pesanan yang disetujui
+      description: 'Role: Operasional. Tim boleh menyusul (status PERSIAPAN); bila diisi, tepat satu PM.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, nama]
+              properties:
+                orderId: { type: integer }
+                nama: { type: string }
+                tglMulai: { type: string, format: date, nullable: true }
+                targetSelesai: { type: string, format: date, nullable: true }
+                members: { type: array, items: { $ref: '#/components/schemas/Anggota' } }
+      responses:
+        '201': { description: Proyek dibuat }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /projects/{projectId}:
+    get:
+      tags: [Proyek]
+      summary: Detail proyek
+      description: Memuat dokumen pesanan; susunan tim tidak dikirim ke Klien.
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      responses:
+        '200': { description: Detail proyek }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Proyek]
+      summary: Ubah nama, tanggal, atau status proyek
+      description: 'Role: Operasional. Proyek SELESAI atau DIBATALKAN tidak menerima progres.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nama: { type: string }
+                tglMulai: { type: string, format: date, nullable: true }
+                targetSelesai: { type: string, format: date, nullable: true }
+                status: { type: string, enum: [PERSIAPAN, BERJALAN, DITUNDA, SELESAI, DIBATALKAN] }
+      responses:
+        '200': { description: Proyek diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /projects/{projectId}/members:
+    put:
+      tags: [Proyek]
+      summary: Ganti susunan tim
+      description: 'Role: Operasional. Tepat satu PM; anggota harus akun Tim aktif. Tugas anggota yang dikeluarkan menjadi tanpa penanggung jawab.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [members]
+              properties:
+                members: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Anggota' } }
+      responses:
+        '200': { description: Tim diperbarui }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /projects/{projectId}/tasks:
+    get:
+      tags: [Proyek]
+      summary: Daftar tugas proyek
+      description: Tim dan Operasional menerima rincian; Klien dan Marketing hanya ringkasan.
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      responses:
+        '200': { description: Daftar tugas }
+    post:
+      tags: [Proyek]
+      summary: Tambah tugas
+      description: 'PM proyek atau Operasional.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Tugas' }
+      responses:
+        '201': { description: Tugas dibuat }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /projects/{projectId}/tasks/{taskId}:
+    patch:
+      tags: [Proyek]
+      summary: Ubah tugas
+      description: 'PM proyek atau Operasional. Persentase diubah lewat endpoint progres.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/taskId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Tugas' }
+      responses:
+        '200': { description: Tugas diperbarui }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Proyek]
+      summary: Hapus tugas
+      description: 'PM proyek atau Operasional.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/taskId' }]
+      responses:
+        '200': { description: Tugas dihapus }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /projects/{projectId}/tasks/{taskId}/progress:
+    post:
+      tags: [Proyek]
+      summary: Perbarui progres tugas
+      description: 'Anggota untuk tugas miliknya; PM dan Operasional untuk semua tugas. catatanTeknis hanya untuk tim; catatanKlien tampil di portal klien.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/taskId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [persentase]
+              properties:
+                persentase: { type: integer, minimum: 0, maximum: 100 }
+                catatanKlien: { type: string, maxLength: 5000 }
+                catatanTeknis: { type: string, maxLength: 5000 }
+      responses:
+        '201': { description: Progres dicatat }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /projects/{projectId}/updates:
+    get:
+      tags: [Proyek]
+      summary: Riwayat progres
+      description: Tim dan Operasional menerima catatan teknis; Klien dan Marketing hanya catatan untuk klien.
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      responses:
+        '200': { description: Riwayat progres }
+  /projects/{projectId}/review:
+    post:
+      tags: [Proyek]
+      summary: Beri ulasan proyek
+      description: 'Role: Klien pemilik, setelah proyek SELESAI, satu kali per proyek.'
+      parameters: [{ $ref: '#/components/parameters/projectId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                komentar: { type: string, maxLength: 2000 }
+      responses:
+        '201': { description: Ulasan tersimpan }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Ringkasan request, projek, dan uang masuk
+      description: 'Role: Marketing, Operasional. Keuntungan = total pembayaran berstatus DITERIMA. Rekap 8 bulan terakhir.'
+      responses:
+        '200': { description: Ringkasan }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /reviews:
+    get:
+      tags: [Dashboard]
+      summary: Daftar ulasan klien
+      description: 'Role: Marketing, Operasional.'
+      responses:
+        '200': { description: Daftar ulasan }
+  /pengaturan:
+    get:
+      tags: [Dashboard]
+      summary: Identitas dan rekening Neo Telemetri untuk tagihan
+      description: Untuk semua pengguna yang masuk. `contoh` bernilai true selama Marketing belum menyimpan data resmi.
+      responses:
+        '200': { description: Pengaturan }
+    put:
+      tags: [Dashboard]
+      summary: Simpan identitas dan rekening
+      description: 'Role: Marketing.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Pengaturan' }
+      responses:
+        '200': { description: Pengaturan disimpan }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /files/dokumen/{id}:
+    get:
+      tags: [Berkas]
+      summary: Unduh dokumen pendukung
+      description: Hanya klien pemilik, Marketing, Operasional, dan anggota proyek terkait.
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: Isi berkas
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /files/bukti/{id}:
+    get:
+      tags: [Berkas]
+      summary: Unduh bukti transfer
+      description: Hanya klien pemilik, Marketing, dan Operasional.
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: Isi berkas
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }

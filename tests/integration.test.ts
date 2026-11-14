@@ -744,6 +744,44 @@ describe('pengaturan dan perbaikan tagihan', () => {
   });
 });
 
+describe('dokumen pendukung tambahan', () => {
+  const PDF = Buffer.from('%PDF-1.4\n% dokumen uji\n');
+  const tambah = (token: string, id: number, nama = 'tambahan.pdf') => api(token).post(`/orders/${id}/documents`).attach('dokumen', PDF, nama);
+
+  test('klien menambah dan menghapus dokumennya selama pengajuan belum diterima', async () => {
+    const order = (await api(tokens.klienA).post('/orders').send({ judul: 'Project Dokumen', kebutuhan: 'Kebutuhan untuk uji dokumen.' })).body.data.id as number;
+    const res = await tambah(tokens.klienA, order);
+    assert.equal(res.status, 201);
+    const doc = res.body.data.find((d: { namaFile: string }) => d.namaFile === 'tambahan.pdf');
+    assert.equal(doc.uploadedBy.role, 'KLIEN');
+    assert.equal((await tambah(tokens.klienB, order)).status, 404);
+    assert.equal((await api(tokens.klienA).post(`/orders/${order}/documents`)).status, 400);
+
+    // Marketing menambah MoU; klien tidak dapat menghapus dokumen Marketing, dan sebaliknya.
+    const mou = (await tambah(tokens.marketing, order, 'MoU.pdf')).body.data.find((d: { namaFile: string }) => d.namaFile === 'MoU.pdf');
+    assert.equal(mou.uploadedBy.role, 'MARKETING');
+    assert.equal((await api(tokens.klienA).delete(`/orders/${order}/documents/${mou.id}`)).status, 403);
+    assert.equal((await api(tokens.marketing).delete(`/orders/${order}/documents/${doc.id}`)).status, 403);
+    assert.equal((await api(tokens.klienA).delete(`/orders/${order}/documents/${doc.id}`)).status, 200);
+
+    // Setelah diterima, klien tidak lagi dapat menambah, Marketing tetap bisa.
+    await api(tokens.marketing).post(`/orders/${order}/approve`).send({ nilaiDisepakati: 3000000 });
+    assert.equal((await tambah(tokens.klienA, order)).status, 409);
+    assert.equal((await tambah(tokens.marketing, order, 'BA-serah-terima.pdf')).status, 201);
+    assert.equal((await api(tokens.marketing).delete(`/orders/${order}/documents/${mou.id}`)).status, 200);
+  });
+
+  test('jumlah dokumen per pesanan dibatasi', async () => {
+    const order = (await api(tokens.klienA).post('/orders').send({ judul: 'Project Banyak Dokumen', kebutuhan: 'Kebutuhan untuk uji batas dokumen.' })).body.data.id as number;
+    for (let i = 0; i < 2; i += 1) {
+      let req = api(tokens.klienA).post(`/orders/${order}/documents`);
+      for (let j = 0; j < 5; j += 1) req = req.attach('dokumen', PDF, `d${i}${j}.pdf`);
+      assert.equal((await req).status, 201);
+    }
+    assert.equal((await tambah(tokens.klienA, order)).status, 400);
+  });
+});
+
 describe('tagihan cetak', () => {
   test('detail pesanan memuat kontak klien untuk tagihan, tetap tertutup bagi klien lain', async () => {
     const order = await prisma.order.findFirstOrThrow({ where: { clientId: klienAId } });
