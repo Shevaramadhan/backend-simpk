@@ -8,6 +8,7 @@ import app from '../app';
 import prisma from '../config/prisma';
 import { signToken } from '../utils/jwt';
 import { mailer } from '../utils/mailer';
+import { google } from '../utils/google';
 import { comparePassword, hashPassword } from '../utils/password';
 
 const PASSWORD = 'kata-sandi-uji-123';
@@ -19,6 +20,8 @@ const api = (token?: string) => ({
   get: (path: string) => request(app).get(`/api/v1${path}`).set('Authorization', `Bearer ${token}`),
   post: (path: string) => request(app).post(`/api/v1${path}`).set('Authorization', `Bearer ${token}`),
   patch: (path: string) => request(app).patch(`/api/v1${path}`).set('Authorization', `Bearer ${token}`),
+  put: (path: string) => request(app).put(`/api/v1${path}`).set('Authorization', `Bearer ${token}`),
+  delete: (path: string) => request(app).delete(`/api/v1${path}`).set('Authorization', `Bearer ${token}`),
 });
 
 async function makeUser(email: string, role: Role) {
@@ -27,6 +30,9 @@ async function makeUser(email: string, role: Role) {
 
 async function clean() {
   await prisma.passwordReset.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.project.deleteMany();
   await prisma.order.deleteMany();
   await prisma.portfolio.deleteMany();
   await prisma.service.deleteMany();
@@ -113,7 +119,7 @@ describe('katalog', () => {
 });
 
 describe('akun klien', () => {
-  const baru = { name: 'Klien Baru', email: 'Baru@Uji.test', password: PASSWORD, namaInstansi: 'Instansi Baru', jenisKlien: 'Perorangan', noWhatsapp: '081234567890' };
+  const baru = { name: 'Klien Baru', email: 'Baru@Uji.test', password: PASSWORD, noWhatsapp: '081234567890' };
   const daftar = (data: object) => request(app).post('/api/v1/auth/register').send(data);
   let clientId: number;
 
@@ -124,7 +130,7 @@ describe('akun klien', () => {
     assert.equal(res.body.data.user.email, 'baru@uji.test');
     assert.ok(!JSON.stringify(res.body).includes('passwordHash'));
     assert.equal((await api(res.body.data.token).get('/users')).status, 403);
-    assert.equal((await api(res.body.data.token).post('/orders').send({ kebutuhan: 'Membuat website profil.' })).status, 201);
+    assert.equal((await api(res.body.data.token).post('/orders').send({ judul: 'Website Profil', kebutuhan: 'Membuat website profil.' })).status, 201);
     clientId = (await prisma.client.findFirstOrThrow({ where: { user: { email: 'baru@uji.test' } } })).id;
   });
 
@@ -158,7 +164,7 @@ describe('akun klien', () => {
 });
 
 describe('pesanan', () => {
-  const pesanan = { kebutuhan: 'Membuat website profil organisasi.' };
+  const pesanan = { judul: 'Website Organisasi', kebutuhan: 'Membuat website profil organisasi.' };
 
   test('klien memesan untuk dirinya sendiri walau mengirim clientId klien lain', async () => {
     const res = await api(tokens.klienA).post('/orders').send({ ...pesanan, clientId: klienBId });
@@ -200,7 +206,6 @@ describe('pesanan', () => {
     const path = `/orders/${body.data.id}/status`;
     assert.equal((await api(tokens.klienA).patch(path).send({ status: 'DITINJAU' })).status, 403);
     const approve = `/orders/${body.data.id}/approve`;
-    assert.equal((await api(tokens.marketing).post(approve).send({ nilaiDisepakati: 1000 })).status, 409);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DISETUJUI' })).status, 400);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'MENJADI_PROYEK' })).status, 400);
     assert.equal((await api(tokens.marketing).patch(path).send({ status: 'DITINJAU' })).status, 200);
@@ -298,5 +303,334 @@ describe('lupa kata sandi', () => {
     assert.ok(token);
     assert.equal((await api(tokens.operasional).patch(`/clients/${klienBId}/email`).send({ email: 'b-baru@uji.test' })).status, 200);
     assert.equal((await reset(token, 'kata-sandi-lain-000')).status, 400);
+  });
+});
+
+describe('proyek, tugas, dan progres', () => {
+  const RAHASIA = 'RAHASIA-TEKNIS error koneksi database';
+  const UNTUK_KLIEN = 'Halaman beranda sudah dapat dilihat.';
+  const akun = {} as Record<'pm' | 'anggota' | 'luar', { id: number; token: string }>;
+  let orderId: number;
+  let projectId: number;
+  let tugasPm: number;
+  let tugasAnggota: number;
+
+  const anggotaTim = () => [
+    { userId: akun.pm.id, posisi: 'Project Manager', isPm: true },
+    { userId: akun.anggota.id, posisi: 'Backend', isPm: false },
+  ];
+
+  async function pesananDisetujui(nilai = 5000000) {
+    const { body } = await api(tokens.klienA).post('/orders').send({ judul: 'Sistem Organisasi', kebutuhan: 'Membuat sistem informasi organisasi.' });
+    const id = body.data.id as number;
+    await api(tokens.marketing).patch(`/orders/${id}/status`).send({ status: 'DITINJAU' });
+    await api(tokens.marketing).post(`/orders/${id}/approve`).send({ nilaiDisepakati: nilai });
+    return id;
+  }
+
+  before(async () => {
+    for (const nama of ['pm', 'anggota', 'luar'] as const) {
+      const user = await makeUser(`${nama}@uji.test`, 'TIM');
+      akun[nama] = { id: user.id, token: signToken(user) };
+    }
+    orderId = await pesananDisetujui();
+  });
+
+  test('hanya Operasional yang membentuk proyek, dari pesanan disetujui', async () => {
+    const data = { orderId, nama: 'Sistem Organisasi', members: anggotaTim() };
+    assert.equal((await api(tokens.marketing).post('/projects').send(data)).status, 403);
+    assert.equal((await api(akun.pm.token).post('/projects').send(data)).status, 403);
+    assert.equal((await api(tokens.klienA).post('/projects').send(data)).status, 403);
+
+    const { body } = await api(tokens.klienA).post('/orders').send({ judul: 'Belum Disetujui', kebutuhan: 'Pesanan yang belum disetujui.' });
+    assert.equal((await api(tokens.operasional).post('/projects').send({ ...data, orderId: body.data.id })).status, 409);
+  });
+
+  test('tim wajib punya tepat satu PM dari akun Tim yang aktif', async () => {
+    const data = { orderId, nama: 'Sistem Organisasi' };
+    const kirim = (members: object[]) => api(tokens.operasional).post('/projects').send({ ...data, members });
+    assert.equal((await kirim([{ userId: akun.pm.id, posisi: 'PM', isPm: false }])).status, 400);
+    assert.equal((await kirim([{ userId: akun.pm.id, posisi: 'PM', isPm: true }, { userId: akun.anggota.id, posisi: 'BE', isPm: true }])).status, 400);
+    const marketing = await prisma.user.findUniqueOrThrow({ where: { email: 'm@uji.test' } });
+    assert.equal((await kirim([{ userId: marketing.id, posisi: 'PM', isPm: true }])).status, 400);
+    assert.equal((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status, 'DISETUJUI');
+  });
+
+  test('proyek memakai nilai pesanan dan pesanan tidak bisa dipakai dua kali', async () => {
+    const data = { orderId, nama: 'Sistem Organisasi', tglMulai: '2026-11-10', targetSelesai: '2026-12-10', members: anggotaTim() };
+    assert.equal((await api(tokens.operasional).post('/projects').send({ ...data, targetSelesai: '2026-11-01' })).status, 400);
+    const res = await api(tokens.operasional).post('/projects').send(data);
+    assert.equal(res.status, 201);
+    assert.equal(Number(res.body.data.nilai), 5000000);
+    assert.equal(res.body.data.status, 'BERJALAN');
+    assert.match(res.body.data.kode, /^PRJ-\d{8}-[0-9A-F]{6}$/);
+    projectId = res.body.data.id;
+    assert.equal((await prisma.order.findUniqueOrThrow({ where: { id: orderId } })).status, 'MENJADI_PROYEK');
+    assert.equal((await api(tokens.operasional).post('/projects').send(data)).status, 409);
+  });
+
+  test('tiap role hanya melihat proyek haknya', async () => {
+    const lihat = (token: string) => api(token).get(`/projects/${projectId}`);
+    for (const token of [tokens.operasional, tokens.marketing, akun.pm.token, akun.anggota.token, tokens.klienA]) {
+      assert.equal((await lihat(token)).status, 200);
+    }
+    assert.equal((await lihat(akun.luar.token)).status, 404);
+    assert.equal((await lihat(tokens.klienB)).status, 404);
+    assert.equal((await api(akun.luar.token).get('/projects')).body.data.length, 0);
+    assert.equal((await api(tokens.klienB).get('/projects')).body.data.length, 0);
+    assert.equal((await api(akun.pm.token).get('/projects')).body.data[0].isPm, true);
+    assert.equal((await api(akun.anggota.token).get('/projects')).body.data[0].isPm, false);
+  });
+
+  test('nilai dan susunan tim hanya untuk yang berhak', async () => {
+    const klien = await api(tokens.klienA).get(`/projects/${projectId}`);
+    assert.equal(klien.body.data.members, undefined);
+    assert.equal(klien.body.data.nilai, undefined);
+    assert.equal((await api(akun.pm.token).get(`/projects/${projectId}`)).body.data.nilai, undefined);
+    assert.equal((await api(akun.pm.token).get('/projects')).body.data[0].nilai, undefined);
+    const marketing = await api(tokens.marketing).get(`/projects/${projectId}`);
+    assert.equal(marketing.body.data.members.length, 2);
+    assert.ok(marketing.body.data.nilai);
+  });
+
+  test('tugas dibuat PM atau Operasional, bukan anggota biasa', async () => {
+    const path = `/projects/${projectId}/tasks`;
+    const tugas = { judul: 'Halaman beranda', deskripsi: 'Detail teknis tugas', assigneeId: akun.anggota.id, bidang: 'FRONTEND' };
+    assert.equal((await api(akun.anggota.token).post(path).send(tugas)).status, 403);
+    assert.equal((await api(tokens.marketing).post(path).send(tugas)).status, 403);
+    assert.equal((await api(tokens.klienA).post(path).send(tugas)).status, 403);
+    assert.equal((await api(akun.luar.token).post(path).send(tugas)).status, 403);
+    assert.equal((await api(akun.pm.token).post(path).send({ ...tugas, assigneeId: akun.luar.id })).status, 400);
+
+    const pertama = await api(akun.pm.token).post(path).send(tugas);
+    assert.equal(pertama.status, 201);
+    tugasAnggota = pertama.body.data.id;
+    const kedua = await api(tokens.operasional).post(path).send({ judul: 'Halaman profil', assigneeId: akun.pm.id, bidang: 'UI_UX' });
+    tugasPm = kedua.body.data.id;
+    assert.equal((await api(tokens.operasional).post('/projects/999999/tasks').send(tugas)).status, 404);
+  });
+
+  test('anggota hanya memperbarui tugasnya, PM semua tugas', async () => {
+    const progres = (id: number) => `/projects/${projectId}/tasks/${id}/progress`;
+    const isi = { persentase: 50, catatanTeknis: RAHASIA, catatanKlien: UNTUK_KLIEN };
+    assert.equal((await api(akun.anggota.token).post(progres(tugasPm)).send(isi)).status, 403);
+    assert.equal((await api(akun.luar.token).post(progres(tugasAnggota)).send(isi)).status, 404);
+    assert.equal((await api(tokens.marketing).post(progres(tugasAnggota)).send(isi)).status, 403);
+    assert.equal((await api(tokens.klienA).post(progres(tugasAnggota)).send(isi)).status, 403);
+    assert.equal((await api(akun.anggota.token).post(progres(tugasAnggota)).send({ persentase: 101 })).status, 400);
+    assert.equal((await api(akun.anggota.token).post(progres(999999)).send(isi)).status, 404);
+
+    const res = await api(akun.anggota.token).post(progres(tugasAnggota)).send(isi);
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.status, 'DIKERJAKAN');
+    assert.equal((await api(akun.pm.token).post(progres(tugasPm)).send({ persentase: 100 })).body.data.status, 'SELESAI');
+  });
+
+  test('progres proyek adalah rata-rata tugas, juga per bidang', async () => {
+    const { data } = (await api(tokens.klienA).get(`/projects/${projectId}`)).body;
+    assert.equal(data.progres, 75);
+    assert.deepEqual(data.progresBidang, { UI_UX: 100, FRONTEND: 50, BACKEND: null, INTEGRASI: null });
+    const order = (await api(tokens.klienA).get(`/orders/${orderId}`)).body.data;
+    assert.equal(order.project.progres, 75);
+    assert.ok(!JSON.stringify(order).includes('RAHASIA'));
+  });
+
+  test('tugas wajib punya bidang', async () => {
+    const res = await api(akun.pm.token).post(`/projects/${projectId}/tasks`).send({ judul: 'Tanpa bidang' });
+    assert.equal(res.status, 400);
+  });
+
+  test('catatan teknis tidak pernah sampai ke Klien dan Marketing', async () => {
+    for (const token of [tokens.klienA, tokens.marketing]) {
+      for (const path of [`/projects/${projectId}`, `/projects/${projectId}/tasks`, `/projects/${projectId}/updates`, '/projects']) {
+        const text = JSON.stringify((await api(token).get(path)).body);
+        assert.ok(!text.includes(RAHASIA), `${path} membocorkan catatan teknis`);
+        assert.ok(!text.includes('catatanTeknis'), `${path} memuat kolom catatanTeknis`);
+        assert.ok(!text.includes('Detail teknis tugas'), `${path} memuat deskripsi tugas`);
+      }
+    }
+    const klien = await api(tokens.klienA).get(`/projects/${projectId}/updates`);
+    assert.equal(klien.body.data.length, 1);
+    assert.equal(klien.body.data[0].catatanKlien, UNTUK_KLIEN);
+    assert.equal(klien.body.data[0].author, undefined);
+    const tugas = await api(tokens.klienA).get(`/projects/${projectId}/tasks`);
+    assert.deepEqual(Object.keys(tugas.body.data[0]).sort(), ['bidang', 'bobot', 'id', 'judul', 'persentase', 'status']);
+  });
+
+  test('tim pelaksana melihat catatan teknis proyeknya', async () => {
+    const res = await api(akun.anggota.token).get(`/projects/${projectId}/updates`);
+    assert.ok(JSON.stringify(res.body).includes(RAHASIA));
+    assert.equal((await api(akun.luar.token).get(`/projects/${projectId}/updates`)).status, 404);
+    assert.equal((await api(tokens.klienB).get(`/projects/${projectId}/updates`)).status, 404);
+  });
+
+  test('tugas saya hanya berisi tugas milik pengguna', async () => {
+    const res = await api(akun.anggota.token).get('/projects/my-tasks');
+    assert.deepEqual(res.body.data.map((tugas: { id: number }) => tugas.id), [tugasAnggota]);
+    assert.equal((await api(tokens.klienA).get('/projects/my-tasks')).status, 403);
+  });
+
+  test('tugas dari proyek lain tidak dapat disentuh lewat proyek ini', async () => {
+    const proyekLain = await api(tokens.operasional).post('/projects').send({ orderId: await pesananDisetujui(), nama: 'Proyek Lain', members: [{ userId: akun.luar.id, posisi: 'PM', isPm: true }] });
+    const lain = proyekLain.body.data.id;
+    assert.equal((await api(akun.luar.token).patch(`/projects/${lain}/tasks/${tugasAnggota}`).send({ judul: 'Diubah' })).status, 404);
+    assert.equal((await api(akun.luar.token).delete(`/projects/${lain}/tasks/${tugasAnggota}`)).status, 404);
+    assert.equal((await api(akun.luar.token).post(`/projects/${lain}/tasks/${tugasAnggota}/progress`).send({ persentase: 10 })).status, 404);
+  });
+
+  test('anggota yang dikeluarkan kehilangan akses dan tugasnya tanpa penanggung jawab', async () => {
+    const path = `/projects/${projectId}/members`;
+    assert.equal((await api(akun.pm.token).put(path).send({ members: anggotaTim() })).status, 403);
+    const res = await api(tokens.operasional).put(path).send({ members: [{ userId: akun.pm.id, posisi: 'Project Manager', isPm: true }] });
+    assert.equal(res.status, 200);
+    assert.equal((await api(akun.anggota.token).get(`/projects/${projectId}`)).status, 404);
+    assert.equal((await prisma.task.findUniqueOrThrow({ where: { id: tugasAnggota } })).assigneeId, null);
+  });
+
+  test('proyek yang ditutup tidak menerima progres', async () => {
+    assert.equal((await api(akun.pm.token).patch(`/projects/${projectId}`).send({ status: 'SELESAI' })).status, 403);
+    assert.equal((await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'SELESAI' })).status, 200);
+    const res = await api(akun.pm.token).post(`/projects/${projectId}/tasks/${tugasPm}/progress`).send({ persentase: 90 });
+    assert.equal(res.status, 409);
+  });
+});
+
+describe('pengajuan, dokumen, tagihan, dan pembayaran', () => {
+  const PDF = Buffer.from('%PDF-1.4\n% dokumen uji\n');
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  let orderId: number;
+  let docId: number;
+  let invoiceId: number;
+
+  const ajukan = (token: string) =>
+    request(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .field('judul', 'Web Bakti Unand 2027')
+      .field('kebutuhan', 'Web dengan fungsi seperti tahun lalu dengan penyesuaian.')
+      .field('anggaran', '8000000')
+      .field('tenggatDiharapkan', '2027-08-07');
+
+  test('klien mengajukan project dengan dokumen pendukung', async () => {
+    const res = await ajukan(tokens.klienA).attach('dokumen', PDF, 'proposal.pdf').attach('dokumen', PNG, 'sketsa.png');
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.judul, 'Web Bakti Unand 2027');
+    orderId = res.body.data.id;
+    const detail = (await api(tokens.klienA).get(`/orders/${orderId}`)).body.data;
+    assert.equal(Number(detail.anggaran), 8000000);
+    assert.deepEqual(detail.documents.map((d: { namaFile: string }) => d.namaFile), ['proposal.pdf', 'sketsa.png']);
+    assert.equal(detail.project, null);
+    docId = detail.documents[0].id;
+  });
+
+  test('berkas palsu dan berkas terlalu besar ditolak tanpa membuat pesanan', async () => {
+    const before = await prisma.order.count();
+    const palsu = await ajukan(tokens.klienA).attach('dokumen', Buffer.from('MZ program'), 'proposal.pdf');
+    assert.equal(palsu.status, 400);
+    const besar = await ajukan(tokens.klienA).attach('dokumen', Buffer.concat([PDF, Buffer.alloc(6 * 1024 * 1024)]), 'besar.pdf');
+    assert.equal(besar.status, 400);
+    assert.equal(await prisma.order.count(), before);
+  });
+
+  test('dokumen hanya dapat diunduh pihak yang berhak', async () => {
+    const path = `/files/dokumen/${docId}`;
+    const milik = await api(tokens.klienA).get(path);
+    assert.equal(milik.status, 200);
+    assert.ok(Buffer.from(milik.body).subarray(0, 5).toString() === '%PDF-' || milik.text.startsWith('%PDF-'));
+    assert.equal((await api(tokens.marketing).get(path)).status, 200);
+    assert.equal((await api(tokens.klienB).get(path)).status, 404);
+    assert.equal((await api(tokens.tim).get(path)).status, 404);
+    assert.equal((await request(app).get(`/api/v1${path}`)).status, 401);
+  });
+
+  test('tagihan hanya untuk pesanan disetujui dan hanya diterbitkan Marketing', async () => {
+    const tagih = (token: string) => api(token).post(`/orders/${orderId}/invoices`).send({ keterangan: 'DP 50%', total: 4000000, jatuhTempo: '2026-11-30' });
+    assert.equal((await tagih(tokens.marketing)).status, 409);
+    assert.equal((await api(tokens.marketing).post(`/orders/${orderId}/approve`).send({ nilaiDisepakati: 8000000 })).status, 200);
+    assert.equal((await tagih(tokens.operasional)).status, 403);
+    assert.equal((await tagih(tokens.klienA)).status, 403);
+    const res = await tagih(tokens.marketing);
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.status, 'DITERBITKAN');
+    assert.match(res.body.data.nomor, /^INV-\d{8}-[0-9A-F]{6}$/);
+    invoiceId = res.body.data.id;
+    await tagih(tokens.marketing).send({ keterangan: 'Pelunasan', total: 4000000 });
+    const detail = (await api(tokens.klienA).get(`/orders/${orderId}`)).body.data;
+    assert.equal(detail.invoices.length, 2);
+  });
+
+  test('bukti transfer: hanya klien pemilik, satu per pemeriksaan, ditolak bisa unggah ulang', async () => {
+    const bayar = (token: string, file = PNG) =>
+      request(app).post(`/api/v1/invoices/${invoiceId}/payments`).set('Authorization', `Bearer ${token}`)
+        .field('jumlah', '4000000').field('tglTransfer', '2026-11-20').attach('bukti', file, 'bukti.png');
+
+    assert.equal((await bayar(tokens.klienB)).status, 404);
+    assert.equal((await bayar(tokens.marketing)).status, 403);
+    assert.equal((await bayar(tokens.klienA, PDF.subarray(0, 3))).status, 400);
+    const pertama = await bayar(tokens.klienA);
+    assert.equal(pertama.status, 201);
+    assert.equal(pertama.body.data.statusVerifikasi, 'MENUNGGU_VERIFIKASI');
+    assert.equal((await bayar(tokens.klienA)).status, 409);
+
+    const periksa = (id: number, data: object, token = tokens.marketing) => api(token).patch(`/payments/${id}`).send(data);
+    assert.equal((await periksa(pertama.body.data.id, { status: 'DITOLAK' })).status, 400);
+    assert.equal((await periksa(pertama.body.data.id, { status: 'DITERIMA' }, tokens.operasional)).status, 403);
+    assert.equal((await periksa(pertama.body.data.id, { status: 'DITOLAK', alasanDitolak: 'Nominal tidak sesuai.' })).status, 200);
+    assert.equal((await periksa(pertama.body.data.id, { status: 'DITERIMA' })).status, 409);
+
+    const kedua = await bayar(tokens.klienA);
+    assert.equal(kedua.status, 201);
+    assert.equal((await api(tokens.klienB).get(`/files/bukti/${kedua.body.data.id}`)).status, 404);
+    assert.equal((await api(tokens.marketing).get(`/files/bukti/${kedua.body.data.id}`)).status, 200);
+    assert.equal((await periksa(kedua.body.data.id, { status: 'DITERIMA' })).status, 200);
+    assert.equal((await prisma.invoice.findUniqueOrThrow({ where: { id: invoiceId } })).status, 'LUNAS');
+    assert.equal((await bayar(tokens.klienA)).status, 409);
+  });
+
+  test('daftar tagihan untuk Marketing dan Operasional saja', async () => {
+    assert.equal((await api(tokens.marketing).get('/invoices')).status, 200);
+    assert.equal((await api(tokens.operasional).get('/invoices')).status, 200);
+    assert.equal((await api(tokens.klienA).get('/invoices')).status, 403);
+    assert.equal((await api(tokens.tim).get('/invoices')).status, 403);
+  });
+
+  test('Operasional membentuk proyek tanpa tim lalu menunjuk tim', async () => {
+    const tim = await prisma.user.findUniqueOrThrow({ where: { email: 't@uji.test' } });
+    const res = await api(tokens.operasional).post('/projects').send({ orderId, nama: 'Web Bakti Unand 2027' });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.status, 'PERSIAPAN');
+    const path = `/projects/${res.body.data.id}/members`;
+    assert.equal((await api(tokens.operasional).put(path).send({ members: [] })).status, 400);
+    assert.equal((await api(tokens.operasional).put(path).send({ members: [{ userId: tim.id, posisi: 'Frontend', isPm: true }] })).status, 200);
+    assert.equal((await prisma.project.findUniqueOrThrow({ where: { id: res.body.data.id } })).status, 'BERJALAN');
+  });
+});
+
+describe('masuk dengan Google', () => {
+  const masuk = () => request(app).post('/api/v1/auth/google').send({ credential: 'x'.repeat(40) });
+
+  test('email baru menjadi akun Klien', async () => {
+    const verify = mock.method(google, 'verify', async () => ({ email: 'google@uji.test', name: 'Pengguna Google', emailVerified: true }));
+    const res = await masuk();
+    verify.mock.restore();
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.user.role, 'KLIEN');
+    assert.ok(await prisma.client.count({ where: { user: { email: 'google@uji.test' } } }));
+  });
+
+  test('email akun internal masuk sesuai role-nya', async () => {
+    const verify = mock.method(google, 'verify', async () => ({ email: 'm@uji.test', name: 'Marketing', emailVerified: true }));
+    const res = await masuk();
+    verify.mock.restore();
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.user.role, 'MARKETING');
+  });
+
+  test('email yang belum diverifikasi Google atau token salah ditolak', async () => {
+    const belum = mock.method(google, 'verify', async () => ({ email: 'baru2@uji.test', name: 'X', emailVerified: false }));
+    assert.equal((await masuk()).status, 401);
+    belum.mock.restore();
+    assert.equal((await masuk()).status, 401);
+    assert.equal(await prisma.user.count({ where: { email: 'baru2@uji.test' } }), 0);
   });
 });

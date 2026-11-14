@@ -11,6 +11,28 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14
+
+### Ditambah
+- Pengajuan project oleh klien: kolom `judul`, dokumen pendukung (tabel `order_documents`, maksimal 5 berkas PDF, PNG, JPG, DOCX masing-masing 5 MB) lewat `POST /orders` multipart.
+- Tagihan milik pesanan sesuai ERD: `POST /orders/:id/invoices` (Marketing), `GET /invoices`, `POST /invoices/:id/payments` (unggah bukti), `PATCH /payments/:id` (verifikasi). Bukti ditolak dapat diunggah ulang; bukti diterima menandai tagihan lunas.
+- Unduhan berhak akses `GET /files/dokumen/:id` dan `GET /files/bukti/:id`; berkas tidak disajikan sebagai folder publik.
+- `POST /auth/google`: masuk atau daftar dengan Google (ID token diperiksa ke Google).
+- Tugas punya `bidang` (UI/UX, FrontEnd, BackEnd, Integrasi) dan `bobot`; progres proyek dan progres per bidang memakai rata-rata berbobot.
+- `GET /orders/:id` memuat dokumen, tagihan, dan progres proyek untuk halaman Payment dan Detail klien.
+- `middlewares/upload.middleware.ts` (jenis berkas diperiksa dari isi), `utils/google.ts`, migrasi `pengajuan_tagihan_bidang`.
+
+### Diubah
+- Pendaftaran cukup nama, email, WhatsApp, dan kata sandi sesuai desain Sign In.
+- Persetujuan pesanan boleh dari status Baru atau Ditinjau.
+- Operasional boleh membentuk proyek tanpa tim (status Persiapan); menunjuk tim mengubahnya menjadi Berjalan.
+
+### Dihapus
+- Tabel `invoice_items` dan kaitan tagihan ke proyek.
+
+### Diperbaiki
+- Baris pertama `controllers/auth.controller.ts` yang rusak karena teks tak sengaja.
+
 ## 2026-11-08
 
 ### Ditambah

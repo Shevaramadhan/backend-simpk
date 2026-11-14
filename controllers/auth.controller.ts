@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express';
 import env from '../config/env';
 import prisma from '../config/prisma';
 import ApiError from '../utils/ApiError';
+import { google } from '../utils/google';
 import { signToken } from '../utils/jwt';
 import { mailer } from '../utils/mailer';
 import { comparePassword, hashPassword } from '../utils/password';
@@ -10,6 +11,7 @@ import { ok } from '../utils/response';
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
+  GoogleLoginInput,
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
@@ -60,9 +62,16 @@ export async function changePassword(req: Request, res: Response, next: NextFunc
 // Role ditentukan di sini, bukan dari permintaan. Akun internal hanya dibuat Operasional.
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, email, password, ...profil } = req.body as RegisterInput;
+    const { name, email, password, noWhatsapp } = req.body as RegisterInput;
+    // Nama instansi sementara memakai nama pendaftar; Marketing dapat melengkapinya di halaman Klien.
     const user = await prisma.user.create({
-      data: { name, email, role: 'KLIEN', passwordHash: await hashPassword(password), client: { create: profil } },
+      data: {
+        name,
+        email,
+        role: 'KLIEN',
+        passwordHash: await hashPassword(password),
+        client: { create: { namaInstansi: name, jenisKlien: 'Perorangan', noWhatsapp } },
+      },
       select: { id: true, name: true, email: true, role: true },
     });
     ok(res, { token: signToken(user), user }, 'Akun dibuat.', 201);
@@ -120,6 +129,43 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
       await tx.user.update({ where: { id: reset.userId }, data: { passwordHash } });
     });
     ok(res, null, 'Kata sandi diperbarui. Silakan masuk.');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Masuk atau daftar dengan Google. Email baru menjadi akun Klien; email yang sudah ada masuk sesuai role-nya,
+ * karena kepemilikan email sudah dibuktikan Google.
+ */
+export async function googleLogin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { credential } = req.body as GoogleLoginInput;
+    const profile = await google.verify(credential);
+    if (!profile.emailVerified) throw new ApiError(401, 'Email Google belum terverifikasi.');
+
+    const select = { id: true, name: true, email: true, role: true, isActive: true } as const;
+    let user = await prisma.user.findUnique({ where: { email: profile.email }, select });
+    let created = false;
+    if (!user) {
+      // Kata sandi acak yang tidak diketahui siapa pun; pengguna tetap dapat membuat sandi lewat lupa kata sandi.
+      const passwordHash = await hashPassword(randomBytes(32).toString('hex'));
+      user = await prisma.user.create({
+        data: {
+          name: profile.name.slice(0, 120),
+          email: profile.email,
+          role: 'KLIEN',
+          passwordHash,
+          client: { create: { namaInstansi: profile.name.slice(0, 160), jenisKlien: 'Perorangan' } },
+        },
+        select,
+      });
+      created = true;
+    }
+    if (!user.isActive) throw new ApiError(401, 'Akun ini dinonaktifkan.');
+
+    const { isActive: _isActive, ...publicUser } = user;
+    ok(res, { token: signToken(user), user: publicUser }, created ? 'Akun dibuat.' : 'Berhasil masuk.', created ? 201 : 200);
   } catch (error) {
     next(error);
   }

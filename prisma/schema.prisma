@@ -45,6 +45,14 @@ enum TaskPriority {
   TINGGI
 }
 
+// Bidang pekerjaan pada tampilan Detail (Figma). Progres bidang = rata-rata berbobot tugas di bidang itu.
+enum TaskBidang {
+  UI_UX
+  FRONTEND
+  BACKEND
+  INTEGRASI
+}
+
 enum InvoiceStatus {
   DRAF
   DITERBITKAN
@@ -78,6 +86,7 @@ model User {
   assignedTasks    Task[]           @relation("TaskAssignee")
   progressUpdates  ProgressUpdate[]
   verifiedPayments Payment[]        @relation("PaymentVerifier")
+  issuedInvoices   Invoice[]        @relation("InvoiceIssuer")
   notifications    Notification[]
   passwordResets   PasswordReset[]
 
@@ -149,6 +158,8 @@ model Portfolio {
 model Order {
   id                Int         @id @default(autoincrement())
   nomor             String      @unique @db.VarChar(40)
+  // Nama project pada form pengajuan (Figma); tidak ada di ERD, perlu ditambahkan System Analyst.
+  judul             String      @default("") @db.VarChar(160)
   clientId          Int         @map("client_id")
   serviceId         Int?        @map("service_id")
   kebutuhan         String      @db.Text
@@ -160,13 +171,31 @@ model Order {
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
-  client   Client    @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  service  Service?  @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  projects Project[]
+  client    Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  service   Service?        @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  projects  Project[]
+  documents OrderDocument[]
+  invoices  Invoice[]
 
   @@index([clientId])
   @@index([status])
   @@map("orders")
+}
+
+// Dokumen pendukung pengajuan. Berkas disimpan di uploads/dokumen dengan nama acak.
+model OrderDocument {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  namaFile  String   @map("nama_file") @db.VarChar(255)
+  path      String   @db.VarChar(255)
+  mime      String   @db.VarChar(100)
+  ukuran    Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_documents")
 }
 
 model Project {
@@ -182,10 +211,9 @@ model Project {
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
   order    Order           @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  members  ProjectMember[]
-  tasks    Task[]
-  invoices Invoice[]
-  review   Review?
+  members ProjectMember[]
+  tasks   Task[]
+  review  Review?
 
   @@index([orderId])
   @@index([status])
@@ -214,6 +242,8 @@ model Task {
   assigneeId Int?         @map("assignee_id")
   tenggat    DateTime?    @db.Date
   prioritas  TaskPriority @default(SEDANG)
+  bidang     TaskBidang   @default(FRONTEND)
+  bobot      Int          @default(1)
   status     TaskStatus   @default(BELUM_DIKERJAKAN)
   persentase Int          @default(0)
   createdAt  DateTime     @default(now()) @map("created_at")
@@ -245,35 +275,25 @@ model ProgressUpdate {
   @@map("progress_updates")
 }
 
+// Tagihan milik pesanan (ERD), diterbitkan Marketing setelah pesanan disetujui (BPMN 3, UC-15).
 model Invoice {
-  id         Int           @id @default(autoincrement())
-  nomor      String        @unique @db.VarChar(40)
-  projectId  Int           @map("project_id")
-  total      Decimal       @db.Decimal(14, 2)
-  tglTerbit  DateTime?     @map("tgl_terbit") @db.Date
-  jatuhTempo DateTime?     @map("jatuh_tempo") @db.Date
-  status     InvoiceStatus @default(DRAF)
-  createdAt  DateTime      @default(now()) @map("created_at")
+  id           Int           @id @default(autoincrement())
+  nomor        String        @unique @db.VarChar(40)
+  orderId      Int           @map("order_id")
+  issuedById   Int?          @map("issued_by_id")
+  keterangan   String        @db.VarChar(160)
+  total        Decimal       @db.Decimal(14, 2)
+  tglTerbit    DateTime      @default(now()) @map("tgl_terbit")
+  jatuhTempo   DateTime?     @map("jatuh_tempo") @db.Date
+  status       InvoiceStatus @default(DITERBITKAN)
+  createdAt    DateTime      @default(now()) @map("created_at")
 
-  project  Project       @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  items    InvoiceItem[]
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  issuedBy User?     @relation("InvoiceIssuer", fields: [issuedById], references: [id], onDelete: SetNull)
   payments Payment[]
 
-  @@index([projectId])
+  @@index([orderId])
   @@map("invoices")
-}
-
-model InvoiceItem {
-  id        Int     @id @default(autoincrement())
-  invoiceId Int     @map("invoice_id")
-  uraian    String  @db.VarChar(200)
-  qty       Int     @default(1)
-  harga     Decimal @db.Decimal(14, 2)
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId])
-  @@map("invoice_items")
 }
 
 model Payment {

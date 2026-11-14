@@ -6,6 +6,7 @@ import validate from '../middlewares/validate.middleware';
 import {
   changePasswordSchema,
   forgotPasswordSchema,
+  googleLoginSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -23,6 +24,7 @@ const limiter = (windowMinutes: number, limit: number) =>
 
 router.post('/login', limiter(15, 10), validate(loginSchema), controller.login);
 router.post('/register', limiter(60, 10), validate(registerSchema), controller.register);
+router.post('/google', limiter(15, 20), validate(googleLoginSchema), controller.googleLogin);
 router.post('/forgot-password', limiter(15, 5), validate(forgotPasswordSchema), controller.forgotPassword);
 router.post('/reset-password', limiter(15, 10), validate(resetPasswordSchema), controller.resetPassword);
 router.get('/me', auth, controller.me);

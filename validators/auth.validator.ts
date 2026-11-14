@@ -8,14 +8,16 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Kata sandi wajib diisi.').max(200),
 });
 
-// Tidak ada kolom role: pendaftaran selalu membuat akun Klien.
+// Tidak ada kolom role: pendaftaran selalu membuat akun Klien. Isian mengikuti desain Sign In ditambah WhatsApp.
 export const registerSchema = z.object({
   name: z.string({ error: 'Nama wajib diisi.' }).trim().min(2, 'Nama minimal 2 karakter.').max(120),
   email: emailField,
   password: newPassword,
-  namaInstansi: z.string({ error: 'Nama instansi wajib diisi.' }).trim().min(2, 'Nama instansi minimal 2 karakter.').max(160),
-  jenisKlien: z.string({ error: 'Jenis klien wajib diisi.' }).trim().min(2, 'Jenis klien wajib diisi.').max(40),
   noWhatsapp: z.string({ error: 'Nomor WhatsApp wajib diisi.' }).trim().regex(/^[0-9+\-\s]{8,25}$/, 'Nomor WhatsApp tidak valid.'),
+});
+
+export const googleLoginSchema = z.object({
+  credential: z.string({ error: 'Token Google wajib dikirim.' }).min(20).max(4096),
 });
 
 export const forgotPasswordSchema = z.object({ email: emailField });
@@ -37,6 +39,7 @@ export const changePasswordSchema = z
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type GoogleLoginInput = z.infer<typeof googleLoginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

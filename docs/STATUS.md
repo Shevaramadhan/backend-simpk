@@ -1,28 +1,31 @@
 # Status Backend
 
-Terakhir diperbarui: 8 November 2026.
+Terakhir diperbarui: 14 November 2026.
 
 ## Posisi saat ini
 
 | Bagian | Status |
 |---|---|
 | Struktur proyek dan TypeScript | Selesai |
-| Skema database (15 model) | Selesai, dua migrasi sudah dijalankan |
+| Skema database (15 model) | Selesai, tiga migrasi sudah dijalankan; mengikuti ERD di `10_Ketentuan_Sistem` dengan tambahan yang dicatat di KEPUTUSAN |
 | Login, `/auth/me`, hak akses per role | Selesai, teruji dengan MySQL |
 | Kelola akun internal | Selesai, teruji dengan MySQL |
-| Middleware akses per proyek | Selesai, belum dipakai rute mana pun |
-| Pendaftaran klien, katalog, pesanan, persetujuan | Selesai, teruji dengan MySQL dan Chrome |
+| Middleware akses per proyek | Selesai, dipakai rute `/projects` |
+| Pendaftaran klien (nama, email, WhatsApp, kata sandi), login Google, katalog, pengajuan project dengan dokumen pendukung, persetujuan | Selesai, teruji dengan MySQL dan Chrome |
 | Ganti dan lupa kata sandi, perbaikan email | Selesai, teruji dengan MySQL dan Chrome; pengiriman email asli belum diuji |
-| Proyek, tim, tugas, progres | Belum dibuat |
-| Tagihan, pembayaran, dashboard | Belum dibuat |
-| Upload bukti transfer | Belum dibuat |
+| Proyek, tim, tugas, progres per bidang berbobot | Selesai, teruji dengan MySQL termasuk uji kebocoran catatan teknis; halaman Operasional dan Tim belum dibuat |
+| Tagihan (DP dan pelunasan oleh Marketing), unggah bukti, verifikasi | Selesai, teruji dengan MySQL dan Chrome |
+| Unggah berkas dan unduhan berhak akses | Selesai: dokumen pendukung dan bukti transfer, jenis berkas diperiksa dari isinya |
+| Dashboard ringkasan | Belum dibuat |
 | Ulasan, pengingat email | Belum dibuat (fitur tambahan) |
 
-Yang sudah teruji: pengecekan tipe, 8 tes tanpa database, 26 tes integrasi dengan MySQL, dan login keempat akun contoh pada server asli.
+Yang sudah teruji: pengecekan tipe, 8 tes tanpa database, 51 tes integrasi dengan MySQL, dan alur klien lengkap di Chrome (daftar sampai melihat progres), dan login keempat akun contoh pada server asli.
 
 ## Catatan deploy
 
 - Isi `SMTP_*`, karena tanpa itu tautan lupa kata sandi tidak terkirim.
+- Isi `GOOGLE_CLIENT_ID` (dan `VITE_GOOGLE_CLIENT_ID` di frontend) dengan OAuth Client ID jenis Web application agar login Google aktif.
+- Folder `uploads/` harus ikut dicadangkan; berkas tidak tersimpan di database.
 - Jika backend berada di belakang proxy, aktifkan `trust proxy` agar pembatas percobaan menghitung alamat IP pengunjung, bukan alamat proxy.
 
 ## Lingkungan pengembangan
@@ -31,8 +34,9 @@ MySQL 8.0.30 dari Laragon di `127.0.0.1:3306`, database `simpk` untuk pengembang
 
 ## Langkah berikutnya
 
-1. Mengerjakan proyek, tim, tugas, dan progres.
-2. Menyiapkan `middlewares/upload.middleware.ts` untuk gambar portofolio dan bukti transfer.
+1. Halaman Operasional: daftar pengajuan disetujui, bentuk proyek, pilih worker (Figma "Project Page Operational").
+2. Halaman Tim: tugas saya, perbarui persentase dan catatan.
+3. Dashboard ringkasan proyek dan uang masuk (REQ-F06).
 
 ## Jadwal
 

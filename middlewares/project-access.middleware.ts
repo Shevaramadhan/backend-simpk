@@ -36,7 +36,9 @@ export function requireProjectPm(param = 'projectId') {
     try {
       const projectId = Number(req.params[param]);
       if (!req.user || !Number.isInteger(projectId)) throw new ApiError(404, 'Proyek tidak ditemukan.');
-      if (req.user.role !== 'OPERASIONAL') {
+      if (req.user.role === 'OPERASIONAL') {
+        if (!(await prisma.project.count({ where: { id: projectId } }))) throw new ApiError(404, 'Proyek tidak ditemukan.');
+      } else {
         const isPm = await prisma.projectMember.count({
           where: { projectId, userId: req.user.id, isPm: true },
         });

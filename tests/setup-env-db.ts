@@ -3,3 +3,5 @@ const url = process.env.TEST_DATABASE_URL || 'mysql://root@127.0.0.1:3306/simpk_
 if (!new URL(url).pathname.endsWith('_test')) throw new Error('Tes integrasi hanya boleh memakai database *_test.');
 process.env.DATABASE_URL = url;
 process.env.JWT_SECRET = 'rahasia-khusus-pengujian-minimal-32-karakter';
+process.env.UPLOAD_DIR = require('node:path').join(require('node:os').tmpdir(), 'simpk-uji-uploads');
+process.env.GOOGLE_CLIENT_ID = 'client-id-uji.apps.googleusercontent.com';

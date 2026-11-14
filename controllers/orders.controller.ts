@@ -1,14 +1,19 @@
 import { randomBytes } from 'node:crypto';
+import { unlink } from 'node:fs/promises';
 import type { OrderStatus, Prisma } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { DOKUMEN, resolveStored, storeFile, type StoredFile } from '../middlewares/upload.middleware';
 import ApiError from '../utils/ApiError';
+import { progressByBidang, projectProgress } from '../utils/progress';
 import { ok } from '../utils/response';
 import type { ApproveOrderInput, CreateOrderInput, UpdateOrderStatusInput } from '../validators/orders.validator';
+import { invoiceFields } from './invoices.controller';
 
 const orderFields = {
   id: true,
   nomor: true,
+  judul: true,
   kebutuhan: true,
   anggaran: true,
   nilaiDisepakati: true,
@@ -18,8 +23,21 @@ const orderFields = {
   createdAt: true,
   client: { select: { id: true, namaInstansi: true } },
   service: { select: { id: true, nama: true } },
+  projects: { select: { id: true, status: true }, take: 1 },
 } satisfies Prisma.OrderSelect;
 
+// Isi halaman Payment dan Detail: dokumen, tagihan, dan progres proyek (tanpa catatan teknis).
+const detailFields = {
+  ...orderFields,
+  documents: { select: { id: true, namaFile: true, mime: true, ukuran: true }, orderBy: { id: 'asc' } },
+  invoices: { select: invoiceFields, orderBy: { createdAt: 'asc' } },
+  projects: {
+    select: { id: true, kode: true, status: true, tasks: { select: { persentase: true, bobot: true, bidang: true } } },
+    take: 1,
+  },
+} satisfies Prisma.OrderSelect;
+
+// Persetujuan diproses lewat endpoint tersendiri karena wajib disertai nilai kesepakatan.
 const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = {
   BARU: ['DITINJAU', 'DITOLAK', 'DIBATALKAN'],
   DITINJAU: ['DITOLAK', 'DIBATALKAN'],
@@ -34,6 +52,12 @@ function orderNumber(): string {
   return `ORD-${date}-${randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
+function idParam(req: Request): number {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+  return id;
+}
+
 async function ownClientId(userId: number): Promise<number> {
   const client = await prisma.client.findUnique({ where: { userId }, select: { id: true } });
   if (!client) throw new ApiError(403, 'Profil klien tidak ditemukan.');
@@ -46,6 +70,7 @@ async function visibleWhere(user: NonNullable<Request['user']>): Promise<Prisma.
 }
 
 export async function create(req: Request, res: Response, next: NextFunction) {
+  const stored: StoredFile[] = [];
   try {
     const { clientId, serviceId, tenggatDiharapkan, ...data } = req.body as CreateOrderInput;
     const isKlien = req.user!.role === 'KLIEN';
@@ -53,13 +78,15 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     // Klien selalu memakai profilnya sendiri; clientId dari permintaan diabaikan.
     const ownerId = isKlien ? await ownClientId(req.user!.id) : clientId;
     if (!ownerId) throw new ApiError(400, 'Data yang dikirim tidak valid.', { clientId: ['Klien wajib dipilih.'] });
-
     if (!isKlien && !(await prisma.client.count({ where: { id: ownerId } }))) {
       throw new ApiError(400, 'Data yang dikirim tidak valid.', { clientId: ['Klien tidak ditemukan.'] });
     }
     if (serviceId && !(await prisma.service.count({ where: { id: serviceId, isVisible: true } }))) {
       throw new ApiError(400, 'Data yang dikirim tidak valid.', { serviceId: ['Jasa tidak tersedia.'] });
     }
+
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+    for (const file of files) stored.push(await storeFile(file, DOKUMEN, 'dokumen'));
 
     const order = await prisma.order.create({
       data: {
@@ -68,11 +95,14 @@ export async function create(req: Request, res: Response, next: NextFunction) {
         clientId: ownerId,
         serviceId: serviceId ?? null,
         tenggatDiharapkan: tenggatDiharapkan ? new Date(tenggatDiharapkan) : null,
+        documents: { create: stored },
       },
       select: orderFields,
     });
-    ok(res, order, 'Pesanan dikirim.', 201);
+    ok(res, order, 'Pengajuan project dikirim.', 201);
   } catch (error) {
+    // Berkas yang sudah tersimpan dihapus lagi bila pengajuan gagal.
+    await Promise.all(stored.map((file) => unlink(resolveStored(file.path)).catch(() => {})));
     next(error);
   }
 }
@@ -92,14 +122,25 @@ export async function list(req: Request, res: Response, next: NextFunction) {
 
 export async function detail(req: Request, res: Response, next: NextFunction) {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id)) throw new ApiError(404, 'Pesanan tidak ditemukan.');
     const order = await prisma.order.findFirst({
-      where: { id, ...(await visibleWhere(req.user!)) },
-      select: orderFields,
+      where: { id: idParam(req), ...(await visibleWhere(req.user!)) },
+      select: detailFields,
     });
     if (!order) throw new ApiError(404, 'Pesanan tidak ditemukan.');
-    ok(res, order);
+    const { projects, ...rest } = order;
+    const project = projects[0];
+    ok(res, {
+      ...rest,
+      project: project
+        ? {
+            id: project.id,
+            kode: project.kode,
+            status: project.status,
+            progres: projectProgress(project.tasks),
+            progresBidang: progressByBidang(project.tasks),
+          }
+        : null,
+    });
   } catch (error) {
     next(error);
   }
@@ -107,8 +148,7 @@ export async function detail(req: Request, res: Response, next: NextFunction) {
 
 export async function updateStatus(req: Request, res: Response, next: NextFunction) {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id)) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+    const id = idParam(req);
     const { status, alasanDitolak } = req.body as UpdateOrderStatusInput;
 
     const order = await prisma.order.findUnique({ where: { id }, select: { status: true } });
@@ -130,19 +170,18 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
   }
 }
 
-// Disetujui setelah MoU sepakat. Nilainya menjadi dasar nilai proyek.
+// Disetujui setelah MoU sepakat, dari status Baru atau Perlu Diskusi. Nilainya menjadi dasar nilai proyek.
 export async function approve(req: Request, res: Response, next: NextFunction) {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id)) throw new ApiError(404, 'Pesanan tidak ditemukan.');
+    const id = idParam(req);
     const { nilaiDisepakati } = req.body as ApproveOrderInput;
 
     if (!(await prisma.order.count({ where: { id } }))) throw new ApiError(404, 'Pesanan tidak ditemukan.');
     const { count } = await prisma.order.updateMany({
-      where: { id, status: 'DITINJAU' },
-      data: { status: 'DISETUJUI', nilaiDisepakati },
+      where: { id, status: { in: ['BARU', 'DITINJAU'] } },
+      data: { status: 'DISETUJUI', nilaiDisepakati, alasanDitolak: null },
     });
-    if (!count) throw new ApiError(409, 'Hanya pesanan yang sedang ditinjau yang dapat disetujui.');
+    if (!count) throw new ApiError(409, 'Pesanan ini tidak dapat disetujui lagi.');
 
     ok(res, await prisma.order.findUnique({ where: { id }, select: orderFields }), 'Pesanan disetujui.');
   } catch (error) {

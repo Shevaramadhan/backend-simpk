@@ -144,6 +144,42 @@ Hanya `kebutuhan` yang wajib. Marketing wajib mengirim `clientId`. Untuk Klien, 
 
 Perubahan di luar tabel dijawab `409`. Status `DISETUJUI` hanya lewat `POST /orders/:id/approve`, dan `MENJADI_PROYEK` hanya diisi modul proyek.
 
+### POST /orders (pengajuan klien)
+
+Klien mengirim `multipart/form-data`: `judul`, `kebutuhan`, `anggaran` (opsional), `tenggatDiharapkan` (opsional), dan sampai 5 berkas `dokumen` (PDF, PNG, JPG, DOCX, masing-masing maksimal 5 MB). Jenis berkas diperiksa dari isinya. Marketing tetap dapat mengirim JSON dengan `clientId`.
+
+### GET /orders/:id
+
+Selain data pesanan, memuat `documents`, `invoices` beserta `payments`, dan `project` (`progres`, `progresBidang`). Catatan teknis tidak pernah ikut.
+
+### POST /orders/:id/invoices
+
+Marketing, untuk pesanan Disetujui atau Menjadi Proyek.
+
+```json
+{ "keterangan": "DP 50%", "total": 4000000, "jatuhTempo": "2026-11-30" }
+```
+
+### POST /invoices/:id/payments
+
+Klien pemilik tagihan, `multipart/form-data`: `jumlah`, `tglTransfer`, berkas `bukti` (PDF, PNG, JPG, maksimal 2 MB). Ditolak `409` bila tagihan lunas atau masih ada bukti yang menunggu diperiksa.
+
+### PATCH /payments/:id
+
+Marketing. `{ "status": "DITERIMA" }` menandai tagihan lunas; `{ "status": "DITOLAK", "alasanDitolak": "..." }` membuat klien dapat mengunggah ulang.
+
+### GET /files/dokumen/:id dan GET /files/bukti/:id
+
+Unduhan berhak akses. Dokumen: klien pemilik, Marketing, Operasional, dan anggota tim proyek terkait. Bukti: klien pemilik, Marketing, Operasional. Selain itu `404`.
+
+### POST /auth/google
+
+```json
+{ "credential": "ID token dari tombol Google" }
+```
+
+Email baru menjadi akun Klien (`201`); email terdaftar masuk sesuai role (`200`). Email yang belum diverifikasi Google ditolak `401`. Tanpa `GOOGLE_CLIENT_ID` dijawab `503`.
+
 ### POST /orders/:id/approve
 
 ```json

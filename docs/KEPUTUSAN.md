@@ -13,7 +13,7 @@ Format: nomor, tanggal, keputusan, alasan, status.
 | B-05 | 7 Nov 2026 | TypeScript mode strict | Keputusan pengembang; kesalahan tertangkap saat build | Berlaku |
 | B-06 | 7 Nov 2026 | Backend dan frontend dua repo terpisah | Repo sudah disiapkan di GitHub | Berlaku |
 | B-07 | 7 Nov 2026 | Empat role login; posisi proyek di `project_members` | BRS 9.1: PM ditunjuk per proyek | Berlaku |
-| B-08 | 7 Nov 2026 | Progres proyek = rata-rata persentase tugas | Memenuhi BRS (Tim mengisi persentase) tanpa angka proyek yang diisi manual | Disetujui PM, menunggu konfirmasi System Analyst |
+| B-08 | 7 Nov 2026 | Progres proyek = rata-rata persentase tugas | Memenuhi BRS (Tim mengisi persentase) tanpa angka proyek yang diisi manual | Digantikan B-29 |
 | B-09 | 7 Nov 2026 | Proyek 1-N tagihan, tagihan 1-N pembayaran | BRS mewajibkan tagihan PDF; aman jika skema DP atau termin dipakai | Berlaku |
 | B-10 | 7 Nov 2026 | Catatan teknis dan catatan klien kolom terpisah per update tugas | Mengikuti BRS 9.2 dan mudah memilih kolom untuk klien | Berlaku |
 | B-11 | 7 Nov 2026 | Tetap Prisma 6 | Temuan `npm audit` tersisa ada di CLI Prisma; perbaikannya butuh Prisma 7 yang berisi perubahan besar | Berlaku, ditinjau setelah proyek |
@@ -32,3 +32,9 @@ Format: nomor, tanggal, keputusan, alasan, status.
 | B-24 | 8 Nov 2026 | Tugas dibuat dan dibagi PM atau Operasional; anggota memperbarui tugas miliknya | Keputusan PM; memperjelas "PM/Tim" pada BRS | Berlaku |
 | B-25 | 8 Nov 2026 | PM melihat ringkasan progres proyeknya tanpa data uang | Keputusan PM; menyelesaikan perbedaan BRS 7.1 dan matriks 6.3 | Berlaku, perlu dicatat di BRS |
 | B-26 | 8 Nov 2026 | Klien melihat judul, status, dan persen tugas tanpa deskripsi; catatan klien tampil tanpa persetujuan | Keputusan PM; BRS 7.1 meminta status task dan waktu proyek terbatas | Berlaku |
+| B-27 | 14 Nov 2026 | Diagram di `10_Ketentuan_Sistem` (use case, ERD, BPMN 1 sampai 3) menjadi acuan alur dan data | Keputusan PM; sejalan dengan BRS | Berlaku |
+| B-28 | 14 Nov 2026 | Tagihan milik pesanan dan diterbitkan manual oleh Marketing; skema DP lalu pelunasan = dua tagihan | ERD dan BPMN 3; skema pembayaran final dibahas kemudian | Berlaku sementara |
+| B-29 | 14 Nov 2026 | Progres = rata-rata berbobot persentase tugas, juga per bidang UI/UX, FrontEnd, BackEnd, Integrasi | Keputusan PM menggabungkan bobot ERD dan tampilan Detail di Figma; menggantikan B-08 | Berlaku, ERD perlu ditambah kolom bidang dan persentase |
+| B-30 | 14 Nov 2026 | Kolom pesanan `judul` dan tabel dokumen pendukung ditambahkan di luar ERD | Diminta form pengajuan Figma | Berlaku, ERD perlu diperbarui |
+| B-31 | 14 Nov 2026 | Login Google: email baru menjadi Klien, email yang sudah ada masuk sesuai role | Keputusan PM; Facebook tidak dipakai | Berlaku, butuh OAuth Client ID |
+| B-32 | 14 Nov 2026 | Berkas unggahan diperiksa dari isinya dan hanya dapat diunduh lewat API berhak akses | Mencegah berkas berbahaya dan kebocoran bukti transfer | Berlaku |

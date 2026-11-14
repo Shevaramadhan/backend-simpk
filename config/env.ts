@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'node:path';
 
 function required(name: string): string {
   const value = process.env[name];
@@ -15,6 +16,9 @@ export default {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   port: Number(process.env.PORT) || 4000,
   frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  // Kosong berarti tombol Google di halaman masuk tidak aktif.
+  googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || 'uploads'),
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT) || 465,

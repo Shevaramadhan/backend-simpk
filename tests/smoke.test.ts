@@ -8,7 +8,7 @@ import request from 'supertest';
 import app from '../app';
 import authorize from '../middlewares/role.middleware';
 import ApiError from '../utils/ApiError';
-import { projectProgress } from '../utils/progress';
+import { progressByBidang, projectProgress } from '../utils/progress';
 
 test('health berjalan', async () => {
   const res = await request(app).get('/api/v1/health');
@@ -57,7 +57,14 @@ test('authorize menolak role yang tidak diizinkan', () => {
   assert.equal(error.status, 403);
 });
 
-test('progres proyek adalah rata-rata persentase tugas', () => {
+test('progres proyek adalah rata-rata berbobot dan dihitung per bidang', () => {
   assert.equal(projectProgress([]), 0);
-  assert.equal(projectProgress([{ persentase: 100 }, { persentase: 50 }, { persentase: 0 }]), 50);
+  assert.equal(projectProgress([{ persentase: 100, bobot: 1 }, { persentase: 50, bobot: 1 }, { persentase: 0, bobot: 1 }]), 50);
+  assert.equal(projectProgress([{ persentase: 100, bobot: 3 }, { persentase: 0, bobot: 1 }]), 75);
+  const bidang = progressByBidang([
+    { persentase: 100, bobot: 1, bidang: 'UI_UX' },
+    { persentase: 40, bobot: 1, bidang: 'BACKEND' },
+    { persentase: 80, bobot: 3, bidang: 'BACKEND' },
+  ]);
+  assert.deepEqual(bidang, { UI_UX: 100, FRONTEND: null, BACKEND: 70, INTEGRASI: null });
 });
