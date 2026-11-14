@@ -511,6 +511,38 @@ describe('proyek, tugas, dan progres', () => {
     assert.equal((await prisma.task.findUniqueOrThrow({ where: { id: tugasAnggota } })).assigneeId, null);
   });
 
+  test('ulasan hanya oleh klien pemilik setelah proyek selesai, sekali saja', async () => {
+    const ulas = (token: string, body: object) => api(token).post(`/projects/${projectId}/review`).send(body);
+    assert.equal((await ulas(tokens.klienA, { rating: 5 })).status, 409);
+    await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'SELESAI' });
+    assert.equal((await ulas(tokens.klienB, { rating: 5 })).status, 404);
+    assert.equal((await ulas(tokens.marketing, { rating: 5 })).status, 403);
+    assert.equal((await ulas(tokens.klienA, { rating: 6 })).status, 400);
+    const res = await ulas(tokens.klienA, { rating: 4, komentar: 'Hasilnya rapi.' });
+    assert.equal(res.status, 201);
+    assert.equal((await ulas(tokens.klienA, { rating: 5 })).status, 409);
+
+    const order = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).orderId;
+    assert.equal((await api(tokens.klienA).get(`/orders/${order}`)).body.data.project.review.rating, 4);
+    const daftar = await api(tokens.marketing).get('/reviews');
+    assert.equal(daftar.status, 200);
+    assert.equal(daftar.body.data[0].client.namaInstansi, (await prisma.client.findUniqueOrThrow({ where: { id: klienAId } })).namaInstansi);
+    assert.equal((await api(tokens.klienA).get('/reviews')).status, 403);
+    await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'BERJALAN' });
+  });
+
+  test('dashboard Marketing merangkum request, projek, dan pembayaran diterima', async () => {
+    const res = await api(tokens.marketing).get('/dashboard');
+    assert.equal(res.status, 200);
+    const data = res.body.data;
+    assert.equal(data.projekMasuk, await prisma.order.count({ where: { status: { in: ['DISETUJUI', 'MENJADI_PROYEK'] } } }));
+    assert.equal(data.bulanan.length, 8);
+    assert.ok(data.bulanan.reduce((n: number, b: { projek: number }) => n + b.projek, 0) >= 1);
+    assert.equal(typeof data.keuntungan, 'number');
+    assert.equal((await api(tokens.tim).get('/dashboard')).status, 403);
+    assert.equal((await api(tokens.klienA).get('/dashboard')).status, 403);
+  });
+
   test('proyek yang ditutup tidak menerima progres', async () => {
     assert.equal((await api(akun.pm.token).patch(`/projects/${projectId}`).send({ status: 'SELESAI' })).status, 403);
     assert.equal((await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'SELESAI' })).status, 200);

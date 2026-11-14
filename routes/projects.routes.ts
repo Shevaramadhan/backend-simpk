@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import * as projects from '../controllers/projects.controller';
+import * as reviews from '../controllers/reviews.controller';
 import * as tasks from '../controllers/tasks.controller';
 import auth from '../middlewares/auth.middleware';
 import { requireProjectAccess, requireProjectPm } from '../middlewares/project-access.middleware';
 import authorize from '../middlewares/role.middleware';
 import validate from '../middlewares/validate.middleware';
+import { createReviewSchema } from '../validators/reviews.validator';
 import {
   createProjectSchema,
   createTaskSchema,
@@ -35,5 +37,6 @@ router.delete('/:projectId/tasks/:taskId', pelaksana, requireProjectPm(), tasks.
 
 router.post('/:projectId/tasks/:taskId/progress', pelaksana, requireProjectAccess(), validate(progressUpdateSchema), tasks.addProgress);
 router.get('/:projectId/updates', requireProjectAccess(), tasks.updates);
+router.post('/:projectId/review', authorize('KLIEN'), requireProjectAccess(), validate(createReviewSchema), reviews.create);
 
 export default router;

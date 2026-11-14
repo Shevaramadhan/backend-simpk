@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
+import dashboardRoutes from './dashboard.routes';
 import catalogRoutes from './catalog.routes';
 import clientsRoutes from './clients.routes';
 import filesRoutes from './files.routes';
@@ -20,6 +21,7 @@ router.use('/orders', ordersRoutes);
 router.use('/projects', projectsRoutes);
 router.use('/files', filesRoutes);
 router.use('/', invoicesRoutes);
+router.use('/', dashboardRoutes);
 router.use('/', catalogRoutes);
 
 export default router;

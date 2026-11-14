@@ -24,6 +24,8 @@ const orderFields = {
   client: { select: { id: true, namaInstansi: true } },
   service: { select: { id: true, nama: true } },
   projects: { select: { id: true, status: true, _count: { select: { members: true } } }, take: 1 },
+  // Penanda di daftar Request Marketing: ada bukti transfer yang perlu diperiksa.
+  invoices: { select: { status: true, payments: { where: { statusVerifikasi: 'MENUNGGU_VERIFIKASI' }, select: { id: true } } } },
 } satisfies Prisma.OrderSelect;
 
 // Isi halaman Payment dan Detail: dokumen, tagihan, dan progres proyek (tanpa catatan teknis).
@@ -32,7 +34,13 @@ const detailFields = {
   documents: { select: { id: true, namaFile: true, mime: true, ukuran: true }, orderBy: { id: 'asc' } },
   invoices: { select: invoiceFields, orderBy: { createdAt: 'asc' } },
   projects: {
-    select: { id: true, kode: true, status: true, tasks: { select: { persentase: true, bobot: true, bidang: true } } },
+    select: {
+      id: true,
+      kode: true,
+      status: true,
+      tasks: { select: { persentase: true, bobot: true, bidang: true } },
+      review: { select: { rating: true, komentar: true, createdAt: true } },
+    },
     take: 1,
   },
 } satisfies Prisma.OrderSelect;
@@ -138,6 +146,7 @@ export async function detail(req: Request, res: Response, next: NextFunction) {
             status: project.status,
             progres: projectProgress(project.tasks),
             progresBidang: progressByBidang(project.tasks),
+            review: project.review,
           }
         : null,
     });

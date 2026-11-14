@@ -16,8 +16,9 @@ Terakhir diperbarui: 14 November 2026.
 | Proyek, tim, tugas, progres per bidang berbobot | Selesai, teruji dengan MySQL termasuk uji kebocoran catatan teknis, dan di Chrome lewat halaman Operasional dan Tim |
 | Tagihan (DP dan pelunasan oleh Marketing), unggah bukti, verifikasi | Selesai, teruji dengan MySQL dan Chrome |
 | Unggah berkas dan unduhan berhak akses | Selesai: dokumen pendukung dan bukti transfer, jenis berkas diperiksa dari isinya |
-| Dashboard ringkasan | Belum dibuat |
-| Ulasan, pengingat email | Belum dibuat (fitur tambahan) |
+| Dashboard ringkasan (REQ-F06) | Selesai untuk Marketing, teruji dengan MySQL dan Chrome |
+| Ulasan klien | Selesai, teruji dengan MySQL dan Chrome |
+| Pengingat email | Belum dibuat (fitur tambahan) |
 
 Yang sudah teruji: pengecekan tipe, 8 tes tanpa database, 53 tes integrasi dengan MySQL, alur klien lengkap di Chrome (daftar sampai melihat progres), alur Operasional memilih tim sampai klien melihat progres di Chrome, dan login keempat akun contoh pada server asli.
 
@@ -34,8 +35,8 @@ MySQL 8.0.30 dari Laragon di `127.0.0.1:3306`, database `simpk` untuk pengembang
 
 ## Langkah berikutnya
 
-1. Dashboard ringkasan proyek dan uang masuk (REQ-F06).
-2. Menutup proyek (status Selesai) dan menetapkan target selesai dari halaman Operasional.
+1. Isi SMTP di VPS agar email lupa kata sandi terkirim, lalu bersihkan data uji sebelum UAT.
+2. Kolom tanggal selesai proyek bila rekap bulanan projek selesai perlu lebih tepat (saat ini memakai waktu perubahan terakhir).
 
 ## Jadwal
 

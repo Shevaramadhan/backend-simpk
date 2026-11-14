@@ -11,6 +11,13 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (halaman Marketing, dashboard, ulasan)
+
+### Ditambah
+- `GET /dashboard` (Marketing, Operasional): request masuk, projek masuk, projek selesai, keuntungan (total pembayaran diterima, B-34), jumlah bukti menunggu, dan rekap 8 bulan terakhir (REQ-F06).
+- Ulasan klien: `POST /projects/:projectId/review` (klien pemilik, proyek Selesai, satu kali) dan `GET /reviews` (Marketing, Operasional). Memakai tabel `reviews` yang sudah ada, tanpa migrasi.
+- `GET /orders` menyertakan tagihan ringkas dengan bukti yang menunggu diperiksa; `GET /orders/:id` menyertakan ulasan proyek.
+
 ## 2026-11-14 (profil klien)
 
 ### Ditambah

@@ -120,6 +120,14 @@ Tautan salah, kedaluwarsa, atau sudah dipakai dijawab `400`.
 
 Untuk email yang salah ketik saat mendaftar. Tautan reset yang belum dipakai ikut dibatalkan. `PATCH /users/:id` melakukan hal yang sama untuk akun internal.
 
+### GET /dashboard
+
+Marketing dan Operasional. Mengembalikan `requestMasuk` (status Baru dan Ditinjau), `projekMasuk` (Disetujui dan Menjadi Proyek), `projekSelesai`, `keuntungan` (total pembayaran berstatus Diterima), `buktiMenunggu`, dan `bulanan` (8 bulan terakhir: `request`, `projek`, `selesai`, `pemasukan`). Bulan selesai memakai waktu perubahan terakhir proyek karena belum ada kolom tanggal selesai.
+
+### POST /projects/:projectId/review dan GET /reviews
+
+Klien pemilik memberi `rating` 1 sampai 5 dan `komentar` opsional setelah proyek berstatus Selesai; satu ulasan per proyek (409 bila sudah ada atau proyek belum selesai). `GET /reviews` untuk Marketing dan Operasional.
+
 ### GET /clients/me dan PATCH /clients/me
 
 Khusus Klien. `PATCH` menerima `name`, `namaInstansi`, `jenisKlien`, `noWhatsapp` (8 sampai 25 karakter angka, `+`, `-`, spasi), dan `alamat` (teks kosong menghapusnya). Kolom lain seperti `email` dan `isActive` diabaikan.
