@@ -78,6 +78,8 @@ model User {
   passwordHash String   @map("password_hash") @db.VarChar(255)
   role         Role
   isActive     Boolean  @default(true) @map("is_active")
+  /// Keahlian utama anggota Tim (worker), diketik bebas, misalnya "Frontend Developer". Kosong untuk role lain.
+  keahlian     String?  @db.VarChar(60)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

@@ -11,6 +11,11 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (keahlian worker)
+
+### Ditambah
+- Kolom `users.keahlian` (teks bebas, maksimal 60 karakter) untuk keahlian utama akun Tim, lewat migrasi `keahlian_worker` (B-33). `POST /users` dan `PATCH /users/:id` menerima `keahlian`; untuk role selain Tim selalu disimpan kosong.
+
 ## 2026-11-14 (persiapan deploy)
 
 ### Ditambah

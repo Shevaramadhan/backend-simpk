@@ -636,6 +636,25 @@ describe('masuk dengan Google', () => {
 });
 
 describe('data untuk halaman Operasional dan Tim', () => {
+  test('keahlian worker disimpan untuk akun Tim saja dan dapat diubah', async () => {
+    const dibuat = await api(tokens.operasional)
+      .post('/users')
+      .send({ name: 'Worker Keahlian', email: 'keahlian@uji.test', password: PASSWORD, role: 'TIM', keahlian: '  Frontend Developer ' });
+    assert.equal(dibuat.status, 201);
+    assert.equal(dibuat.body.data.keahlian, 'Frontend Developer');
+
+    const marketing = await api(tokens.operasional)
+      .post('/users')
+      .send({ name: 'Marketing Keahlian', email: 'keahlian-mkt@uji.test', password: PASSWORD, role: 'MARKETING', keahlian: 'Desain' });
+    assert.equal(marketing.body.data.keahlian, null);
+
+    const ubah = await api(tokens.operasional).patch(`/users/${dibuat.body.data.id}`).send({ keahlian: 'UI/UX Designer' });
+    assert.equal(ubah.body.data.keahlian, 'UI/UX Designer');
+    const kosong = await api(tokens.operasional).patch(`/users/${dibuat.body.data.id}`).send({ keahlian: '' });
+    assert.equal(kosong.body.data.keahlian, null);
+    assert.equal((await api(tokens.operasional).patch(`/users/${dibuat.body.data.id}`).send({ keahlian: 'x'.repeat(61) })).status, 400);
+  });
+
   test('daftar akun memuat jumlah project tiap worker', async () => {
     const res = await api(tokens.operasional).get('/users');
     const pm = res.body.data.find((u: { email: string }) => u.email === 'pm@uji.test');

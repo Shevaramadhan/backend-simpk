@@ -5,7 +5,7 @@ import { hashPassword } from '../utils/password';
 import { ok } from '../utils/response';
 import type { CreateUserInput, UpdateUserInput } from '../validators/users.validator';
 
-const publicFields = { id: true, name: true, email: true, role: true, isActive: true, createdAt: true };
+const publicFields = { id: true, name: true, email: true, role: true, isActive: true, keahlian: true, createdAt: true };
 const listFields = { ...publicFields, _count: { select: { memberships: true } } };
 
 export async function list(req: Request, res: Response, next: NextFunction) {
@@ -23,9 +23,10 @@ export async function list(req: Request, res: Response, next: NextFunction) {
 
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
-    const { password, ...data } = req.body as CreateUserInput;
+    const { password, keahlian, ...data } = req.body as CreateUserInput;
     const user = await prisma.user.create({
-      data: { ...data, passwordHash: await hashPassword(password) },
+      // Keahlian hanya dicatat untuk akun Tim.
+      data: { ...data, keahlian: data.role === 'TIM' ? (keahlian ?? null) : null, passwordHash: await hashPassword(password) },
       select: publicFields,
     });
     ok(res, user, 'Akun dibuat.', 201);

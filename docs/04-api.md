@@ -67,7 +67,7 @@ Email salah, kata sandi salah, dan akun nonaktif dijawab sama: `401 Email atau k
 
 `role` hanya `MARKETING`, `OPERASIONAL`, atau `TIM`.
 
-Setiap akun pada `GET /users` menyertakan `jumlahProject`, yaitu banyak project yang pernah diikuti (dipakai kartu worker).
+Setiap akun pada `GET /users` menyertakan `jumlahProject`, yaitu banyak project yang pernah diikuti, dan `keahlian` (dipakai kartu worker dan saringan Pilih Worker). `POST /users` dan `PATCH /users/:id` menerima `keahlian` opsional; teks kosong menghapusnya, dan untuk role selain Tim selalu kosong.
 
 ### PATCH /users/:id
 

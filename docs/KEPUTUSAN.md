@@ -38,3 +38,4 @@ Format: nomor, tanggal, keputusan, alasan, status.
 | B-30 | 14 Nov 2026 | Kolom pesanan `judul` dan tabel dokumen pendukung ditambahkan di luar ERD | Diminta form pengajuan Figma | Berlaku, ERD perlu diperbarui |
 | B-31 | 14 Nov 2026 | Login Google: email baru menjadi Klien, email yang sudah ada masuk sesuai role | Keputusan PM; Facebook tidak dipakai | Berlaku, butuh OAuth Client ID |
 | B-32 | 14 Nov 2026 | Berkas unggahan diperiksa dari isinya dan hanya dapat diunduh lewat API berhak akses | Mencegah berkas berbahaya dan kebocoran bukti transfer | Berlaku |
+| B-33 | 14 Nov 2026 | Kolom `users.keahlian` (teks bebas, satu keahlian utama) untuk akun Tim; role tetap Tim sesuai BRS | Anggota Neo Telemetri punya keahlian tetap (Frontend, Backend, UI/UX, dan lainnya); dipakai untuk saringan Pilih Worker | Berlaku, ERD perlu diperbarui |
