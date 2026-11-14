@@ -11,6 +11,11 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (profil klien)
+
+### Ditambah
+- `GET /clients/me` dan `PATCH /clients/me`: klien melihat dan mengubah profilnya sendiri (nama, nama instansi, jenis klien, nomor WhatsApp, alamat). Email dan status aktif tidak dapat diubah lewat jalur ini. Berguna untuk klien yang masuk dengan Google dan belum punya nomor WhatsApp.
+
 ## 2026-11-14 (keahlian worker)
 
 ### Ditambah

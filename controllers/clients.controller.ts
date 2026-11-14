@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import prisma from '../config/prisma';
 import ApiError from '../utils/ApiError';
 import { ok } from '../utils/response';
-import type { UpdateClientEmailInput, UpdateClientInput } from '../validators/clients.validator';
+import type { UpdateClientEmailInput, UpdateClientInput, UpdateOwnProfileInput } from '../validators/clients.validator';
 
 const clientFields = {
   id: true,
@@ -13,6 +13,33 @@ const clientFields = {
   isActive: true,
   user: { select: { id: true, name: true, email: true } },
 };
+
+// Profil milik klien yang sedang masuk (halaman Profil di portal).
+export async function me(req: Request, res: Response, next: NextFunction) {
+  try {
+    const client = await prisma.client.findUnique({ where: { userId: req.user!.id }, select: clientFields });
+    if (!client) throw new ApiError(404, 'Profil klien tidak ditemukan.');
+    ok(res, client);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateMe(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { name, ...profil } = req.body as UpdateOwnProfileInput;
+    const client = await prisma.client.findUnique({ where: { userId: req.user!.id }, select: { id: true } });
+    if (!client) throw new ApiError(404, 'Profil klien tidak ditemukan.');
+    const updated = await prisma.client.update({
+      where: { id: client.id },
+      data: { ...profil, ...(name === undefined ? {} : { user: { update: { name } } }) },
+      select: clientFields,
+    });
+    ok(res, updated, 'Profil diperbarui.');
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {

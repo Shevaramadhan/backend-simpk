@@ -21,5 +21,23 @@ export const updateClientSchema = z
 
 export const updateClientEmailSchema = z.object({ email: emailField });
 
+// Profil yang diubah klien sendiri. Email dan status aktif tidak termasuk.
+export const updateOwnProfileSchema = z
+  .object({
+    name: z.string({ error: 'Nama wajib diisi.' }).trim().min(2, 'Nama minimal 2 karakter.').max(120).optional(),
+    namaInstansi: profil.namaInstansi.optional(),
+    jenisKlien: profil.jenisKlien.optional(),
+    noWhatsapp: z.string({ error: 'Nomor WhatsApp wajib diisi.' }).trim().regex(/^[0-9+\-\s]{8,25}$/, 'Nomor WhatsApp tidak valid.').optional(),
+    alamat: z
+      .string()
+      .trim()
+      .max(255, 'Alamat maksimal 255 karakter.')
+      .nullable()
+      .optional()
+      .transform((value) => (value === undefined ? undefined : value || null)),
+  })
+  .refine((data) => Object.keys(data).length > 0, 'Tidak ada data yang diubah.');
+
 export type UpdateClientEmailInput = z.infer<typeof updateClientEmailSchema>;
 export type UpdateClientInput = z.infer<typeof updateClientSchema>;
+export type UpdateOwnProfileInput = z.infer<typeof updateOwnProfileSchema>;

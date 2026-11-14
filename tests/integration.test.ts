@@ -156,6 +156,30 @@ describe('akun klien', () => {
     assert.equal(res.body.data.user.email, 'perbaikan@uji.test');
   });
 
+  test('klien melihat dan mengubah profilnya sendiri, tidak termasuk email dan status', async () => {
+    const lihat = await api(tokens.klienA).get('/clients/me');
+    assert.equal(lihat.status, 200);
+    assert.equal(lihat.body.data.id, klienAId);
+    assert.equal((await api(tokens.marketing).get('/clients/me')).status, 403);
+
+    const ubah = await api(tokens.klienA)
+      .patch('/clients/me')
+      .send({ name: 'Klien A Baru', namaInstansi: 'Himpunan A', jenisKlien: 'Organisasi', noWhatsapp: '0812 3456 7890', alamat: '' });
+    assert.equal(ubah.status, 200);
+    assert.equal(ubah.body.data.user.name, 'Klien A Baru');
+    assert.equal(ubah.body.data.noWhatsapp, '0812 3456 7890');
+    assert.equal(ubah.body.data.alamat, null);
+
+    // Kolom yang tidak dikenal (email, isActive) diabaikan; WhatsApp tidak valid ditolak.
+    await api(tokens.klienA).patch('/clients/me').send({ name: 'Klien A Baru', email: 'curang@uji.test', isActive: false });
+    const akun = await prisma.user.findUniqueOrThrow({ where: { email: 'a@uji.test' } });
+    assert.equal(akun.isActive, true);
+    assert.equal((await api(tokens.klienA).patch('/clients/me').send({ noWhatsapp: 'abc' })).status, 400);
+    assert.equal((await api(tokens.klienA).patch('/clients/me').send({})).status, 400);
+    // Profil klien lain tidak tersentuh.
+    assert.equal((await prisma.client.findUniqueOrThrow({ where: { id: klienBId } })).namaInstansi, 'Klien B');
+  });
+
   test('klien yang dinonaktifkan tidak dapat masuk', async () => {
     assert.equal((await api(tokens.marketing).patch(`/clients/${clientId}`).send({ isActive: false })).status, 200);
     const login = await request(app).post('/api/v1/auth/login').send({ email: 'perbaikan@uji.test', password: PASSWORD });

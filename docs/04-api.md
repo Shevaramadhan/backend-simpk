@@ -120,6 +120,10 @@ Tautan salah, kedaluwarsa, atau sudah dipakai dijawab `400`.
 
 Untuk email yang salah ketik saat mendaftar. Tautan reset yang belum dipakai ikut dibatalkan. `PATCH /users/:id` melakukan hal yang sama untuk akun internal.
 
+### GET /clients/me dan PATCH /clients/me
+
+Khusus Klien. `PATCH` menerima `name`, `namaInstansi`, `jenisKlien`, `noWhatsapp` (8 sampai 25 karakter angka, `+`, `-`, spasi), dan `alamat` (teks kosong menghapusnya). Kolom lain seperti `email` dan `isActive` diabaikan.
+
 ### PATCH /clients/:id
 
 Menonaktifkan klien juga menonaktifkan akun login-nya.
