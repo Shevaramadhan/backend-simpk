@@ -11,6 +11,11 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-14 (data demo)
+
+### Ditambah
+- `prisma/demo.ts` dengan `npm run db:demo` dan `npm run db:demo:hapus`: data contoh untuk semua kondisi alur, ditandai `DEMO-` dan `@demo.test`, termasuk berkas dokumen dan bukti transfer kecil di folder unggahan.
+
 ## 2026-11-14 (halaman Marketing, dashboard, ulasan)
 
 ### Ditambah

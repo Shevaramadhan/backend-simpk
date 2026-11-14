@@ -12,6 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["index.ts", "app.ts", "config", "controllers", "middlewares", "routes", "types", "utils", "validators", "prisma/seed.ts", "tests"],
+  "include": ["index.ts", "app.ts", "config", "controllers", "middlewares", "routes", "types", "utils", "validators", "prisma/seed.ts", "prisma/demo.ts", "tests"],
   "exclude": ["node_modules", "dist"]
 }

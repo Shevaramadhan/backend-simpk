@@ -11,6 +11,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "db:demo": "tsx prisma/demo.ts",
+    "db:demo:hapus": "tsx prisma/demo.ts hapus",
     "build": "prisma generate && tsc",
     "deploy": "npm ci && npm run build && prisma migrate deploy",
     "typecheck": "tsc --noEmit",

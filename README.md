@@ -36,6 +36,17 @@ Dibuat oleh seed untuk pengembangan, kata sandinya mengikuti `SEED_PASSWORD`:
 | Tim | tim@contoh.test |
 | Klien | klien@contoh.test |
 
+## Data demo
+
+Untuk melihat tampilan setiap kondisi alur (UAT atau presentasi), jalankan setelah `npm run db:seed`:
+
+```bash
+npm run db:demo          # hapus data demo lama lalu isi ulang
+npm run db:demo:hapus    # hapus data demo saja
+```
+
+Isinya 12 pengajuan di semua status (baru, diskusi, diterima menunggu tim, dikerjakan, selesai dengan dan tanpa ulasan, ditolak, dibatalkan), tagihan dengan bukti menunggu, diterima, dan ditolak, 6 worker dengan keahlian berbeda, dan 5 klien dummy. Sebagian dikaitkan ke `klien@contoh.test` dan `tim@contoh.test` agar langsung terlihat. Data demo ditandai nomor berawalan `DEMO-` dan email `@demo.test`, kata sandinya `SEED_PASSWORD`. Hapus data demo sebelum sistem dipakai resmi.
+
 ## Tes
 
 ```bash
