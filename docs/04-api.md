@@ -11,7 +11,7 @@ Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak,
 | Metode | Alamat | Akses | Keterangan |
 |---|---|---|---|
 | GET | `/health` | Publik | Memeriksa server |
-| POST | `/auth/login` | Publik | Maksimal 10 percobaan per 15 menit |
+| POST | `/auth/login` | Publik | Maksimal 10 percobaan gagal per 15 menit per IP; login berhasil tidak dihitung |
 | POST | `/auth/register` | Publik | Pendaftaran akun Klien, maksimal 10 per jam |
 | POST | `/auth/forgot-password` | Publik | Mengirim tautan reset, maksimal 5 per 15 menit |
 | POST | `/auth/reset-password` | Publik | Membuat kata sandi baru dari tautan |

@@ -832,3 +832,23 @@ describe('data untuk halaman Operasional dan Tim', () => {
     assert.ok(orders.body.data.some((o: { projects: { _count: { members: number } }[] }) => o.projects[0]?._count.members >= 1));
   });
 });
+
+// Harus menjadi blok terakhir: di akhir uji, login dari alamat ini sengaja terblokir.
+describe('pembatas login', () => {
+  test('login berhasil tidak dihitung, login gagal tetap dibatasi', async () => {
+    for (let i = 0; i < 12; i++) {
+      const res = await request(app).post('/api/v1/auth/login').send({ email: 'm@uji.test', password: PASSWORD });
+      assert.equal(res.status, 200, `login berhasil ke-${i + 1} tidak boleh diblokir`);
+    }
+    let diblokir = 0;
+    for (let i = 0; i < 12 && !diblokir; i++) {
+      const res = await request(app).post('/api/v1/auth/login').send({ email: 'm@uji.test', password: 'tebakan-salah' });
+      if (res.status === 429) diblokir = i + 1;
+      else assert.equal(res.status, 401);
+    }
+    assert.ok(diblokir > 0 && diblokir <= 11, `percobaan gagal harus diblokir paling lambat percobaan ke-11 (${diblokir})`);
+    // Setelah diblokir, kata sandi benar pun ditolak sampai jendela waktu habis.
+    const benar = await request(app).post('/api/v1/auth/login').send({ email: 'm@uji.test', password: PASSWORD });
+    assert.equal(benar.status, 429);
+  });
+});

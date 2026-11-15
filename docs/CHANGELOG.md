@@ -11,6 +11,12 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-15 (pembatas login)
+
+### Diubah
+- Pembatas `/auth/login` hanya menghitung percobaan gagal (`skipSuccessfulRequests`), tetap 10 per 15 menit per IP. Peserta UAT yang berganti akun berkali-kali dari satu WiFi tidak lagi terblokir, sedangkan tebakan kata sandi tetap dibatasi (B-38).
+- Uji integrasi: 12 login berhasil tidak diblokir; percobaan gagal diblokir paling lambat yang ke-11, lalu kata sandi benar pun ditolak sampai jendela waktu habis.
+
 ## 2026-11-15 (dokumentasi API Swagger)
 
 ### Ditambah

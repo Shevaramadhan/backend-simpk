@@ -234,7 +234,7 @@ paths:
     post:
       tags: [Auth]
       summary: Masuk dengan email dan kata sandi
-      description: Dibatasi 10 percobaan per 15 menit per alamat IP.
+      description: Dibatasi 10 percobaan gagal per 15 menit per alamat IP; login yang berhasil tidak dihitung.
       security: []
       requestBody:
         required: true
