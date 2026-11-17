@@ -12,6 +12,8 @@ Sumber kebenaran adalah `prisma/schema.prisma`. Dokumen ini menjelaskan maksudny
 | Service | `services` | Daftar jasa dengan estimasi biaya dan waktu |
 | Portfolio | `portfolios` | Contoh proyek untuk katalog |
 | Order | `orders` | Pesanan dari klien |
+| OrderDocument | `order_documents` | Dokumen pendukung pesanan |
+| OrderComment | `order_comments` | Komentar/diskusi antara klien, Marketing, Operasional, dan tim proyek |
 | Project | `projects` | Proyek yang dibentuk Operasional |
 | ProjectMember | `project_members` | Anggota proyek, posisi, penanda PM |
 | Task | `tasks` | Tugas dan persentase penyelesaian |

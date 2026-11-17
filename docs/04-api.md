@@ -37,6 +37,8 @@ Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak,
 | GET | `/orders/:id` | Klien, Marketing, Operasional | Pesanan klien lain dijawab 404 |
 | PATCH | `/orders/:id/status` | Marketing | Mengubah status pesanan |
 | POST | `/orders/:id/approve` | Marketing | Menyetujui pesanan dengan nilai kesepakatan |
+| GET | `/orders/:id/comments` | Klien, Marketing, Operasional, Tim | Daftar komentar diskusi pesanan/proyek |
+| POST | `/orders/:id/comments` | Klien, Marketing, Operasional, Tim | Mengirim komentar pada diskusi pesanan/proyek |
 
 ### POST /auth/login
 

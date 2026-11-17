@@ -91,6 +91,7 @@ model User {
   verifiedPayments Payment[]        @relation("PaymentVerifier")
   issuedInvoices   Invoice[]        @relation("InvoiceIssuer")
   uploadedDocuments OrderDocument[] @relation("DocumentUploader")
+  orderComments    OrderComment[]
   notifications    Notification[]
   passwordResets   PasswordReset[]
 
@@ -196,6 +197,7 @@ model Order {
   projects  Project[]
   documents OrderDocument[]
   invoices  Invoice[]
+  comments  OrderComment[]
 
   @@index([clientId])
   @@index([status])
@@ -370,4 +372,20 @@ model Notification {
 
   @@index([userId])
   @@map("notifications")
+}
+
+// Diskusi/komentar pada pengajuan dan proyek antara klien pemilik, Marketing, Operasional, dan anggota tim terkait.
+model OrderComment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  authorId  Int      @map("author_id")
+  pesan     String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order  Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([authorId])
+  @@map("order_comments")
 }

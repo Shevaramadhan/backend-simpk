@@ -11,6 +11,7 @@ K = kelola, L = lihat, M = hanya miliknya atau yang ditugaskan, - = tidak ada ak
 | Pembentukan tim dan penugasan | - | L | K | M (lihat) |
 | Progres: catatan teknis | - | - | K | M (ubah) |
 | Progres: catatan untuk klien | M (lihat) | L | K | M (ubah) |
+| Diskusi & komentar proyek | M (lihat, kirim) | K (lihat, kirim) | K (lihat, kirim) | M (lihat, kirim di proyeknya) |
 | Tagihan dan pembayaran | M (lihat, unggah bukti) | K | L | - |
 | Ringkasan proyek dan uang masuk | - | L | L | - |
 | Penilaian dan ulasan | M (kelola) | L | L | - |

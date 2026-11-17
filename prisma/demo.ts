@@ -54,6 +54,7 @@ async function hapus() {
     prisma.projectMember.deleteMany({ where: { userId: { in: demoUsers } } }),
     prisma.payment.deleteMany({ where: { invoice: { orderId: { in: ids } } } }),
     prisma.invoice.deleteMany({ where: { orderId: { in: ids } } }),
+    prisma.orderComment.deleteMany({ where: { OR: [{ orderId: { in: ids } }, { authorId: { in: demoUsers } }] } }),
     prisma.order.deleteMany({ where: { id: { in: ids } } }),
     prisma.passwordReset.deleteMany({ where: { userId: { in: demoUsers } } }),
     prisma.client.deleteMany({ where: { userId: { in: demoUsers } } }),

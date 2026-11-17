@@ -11,6 +11,14 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-17 (komentar dan diskusi proyek)
+
+### Ditambah
+- Tabel `order_comments` (`OrderComment`) lewat migrasi `komentar_proyek` untuk ruang komentar/chat yang terikat ke pesanan dan berlanjut saat proyek berjalan (B-39).
+- Endpoint `GET /orders/:id/comments` dan `POST /orders/:id/comments` (`controllers/comments.controller.ts`, `validators/comments.validator.ts`) untuk klien pemilik, Marketing, Operasional, dan anggota Tim proyek terkait. Pengajuan ditolak/dibatalkan atau proyek dibatalkan tidak menerima komentar baru (`409`).
+- `GET /projects` dan `GET /projects/:projectId` kini menyertakan `orderId` agar halaman proyek pengurus dapat memuat utas komentar yang sama.
+- Dokumentasi OpenAPI (`docs/openapi.yaml`), panduan API/database/hak akses, `prisma/demo.ts`, dan 3 uji integrasi hak akses serta batas status komentar.
+
 ## 2026-11-15 (pembatas login)
 
 ### Diubah

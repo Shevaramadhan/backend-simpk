@@ -41,6 +41,7 @@ function present(project: ProjectRow, role: CurrentUser['role']) {
   const { tasks, order, nilai, ...rest } = project;
   return {
     ...rest,
+    orderId: order.id,
     klien: order.client.namaInstansi,
     nomorPesanan: order.nomor,
     kebutuhan: order.kebutuhan,

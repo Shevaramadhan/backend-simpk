@@ -162,6 +162,18 @@ components:
           properties:
             name: { type: string }
             role: { $ref: '#/components/schemas/Role' }
+    Komentar:
+      type: object
+      properties:
+        id: { type: integer }
+        pesan: { type: string }
+        createdAt: { type: string, format: date-time }
+        author:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            role: { $ref: '#/components/schemas/Role' }
     Tagihan:
       type: object
       properties:
@@ -660,6 +672,48 @@ paths:
       responses:
         '200': { description: Dokumen dihapus }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /orders/{id}/comments:
+    get:
+      tags: [Pesanan]
+      summary: Daftar komentar/diskusi pesanan dan proyek
+      description: 'Role: Klien pemilik, Marketing, Operasional, dan anggota Tim proyek terkait. Selain itu 404.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      responses:
+        '200':
+          description: Daftar komentar urut kronologis
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Sukses'
+                  - properties: { data: { type: array, items: { $ref: '#/components/schemas/Komentar' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Pesanan]
+      summary: Kirim komentar/diskusi pada pesanan atau proyek
+      description: 'Role: Klien pemilik, Marketing, Operasional, dan anggota Tim proyek terkait. Ditolak 409 bila pengajuan ditolak/dibatalkan atau proyek dibatalkan.'
+      parameters: [{ $ref: '#/components/parameters/id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pesan]
+              properties:
+                pesan: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '201':
+          description: Komentar terkirim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Sukses'
+                  - properties: { data: { $ref: '#/components/schemas/Komentar' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
   /orders/{id}/status:

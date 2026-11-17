@@ -34,6 +34,7 @@ async function clean() {
   await prisma.payment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.project.deleteMany();
+  await prisma.orderComment.deleteMany();
   await prisma.order.deleteMany();
   await prisma.portfolio.deleteMany();
   await prisma.service.deleteMany();
@@ -830,6 +831,93 @@ describe('data untuk halaman Operasional dan Tim', () => {
     assert.ok(res.body.data.documents.length >= 1);
     const orders = await api(tokens.operasional).get('/orders');
     assert.ok(orders.body.data.some((o: { projects: { _count: { members: number } }[] }) => o.projects[0]?._count.members >= 1));
+  });
+});
+
+describe('komentar dan diskusi proyek', () => {
+  let orderId: number;
+  let projectId: number;
+
+  test('klien pemilik, Marketing, dan Operasional berdiskusi sejak tahap pengajuan; Tim luar ditolak 404', async () => {
+    const orderRes = await api(tokens.klienA).post('/orders').send({
+      judul: 'Portal Diskusi Klien',
+      kebutuhan: 'Aplikasi web dengan fitur pelacakan progres dan diskusi.',
+      anggaran: 3500000,
+    });
+    assert.equal(orderRes.status, 201);
+    orderId = orderRes.body.data.id;
+
+    // Sebelum project dibentuk, Tim belum punya akses (404); klien lain juga 404.
+    assert.equal((await api(tokens.tim).get(`/orders/${orderId}/comments`)).status, 404);
+    assert.equal((await api(tokens.klienB).get(`/orders/${orderId}/comments`)).status, 404);
+    assert.equal((await api(tokens.klienB).post(`/orders/${orderId}/comments`).send({ pesan: 'Halo' })).status, 404);
+
+    // Klien pemilik dan Marketing dapat berkomentar sejak pengajuan (termasuk saat Ditinjau).
+    await api(tokens.marketing).patch(`/orders/${orderId}/status`).send({ status: 'DITINJAU' });
+    const c1 = await api(tokens.klienA).post(`/orders/${orderId}/comments`).send({ pesan: '  Mohon konfirmasi timeline pengerjaan.  ' });
+    assert.equal(c1.status, 201);
+    assert.equal(c1.body.data.pesan, 'Mohon konfirmasi timeline pengerjaan.');
+    assert.equal(c1.body.data.author.role, 'KLIEN');
+
+    const c2 = await api(tokens.marketing).post(`/orders/${orderId}/comments`).send({ pesan: 'Baik kak, kami jadwalkan diskusi teknis besok.' });
+    assert.equal(c2.status, 201);
+    assert.equal(c2.body.data.author.role, 'MARKETING');
+
+    // Komentar kosong ditolak 400.
+    assert.equal((await api(tokens.klienA).post(`/orders/${orderId}/comments`).send({ pesan: '   ' })).status, 400);
+  });
+
+  test('setelah project berjalan, anggota Tim terkait ikut berdiskusi dan detail proyek memuat orderId', async () => {
+    await api(tokens.marketing).post(`/orders/${orderId}/approve`).send({ nilaiDisepakati: 3500000 });
+    const timUser = await prisma.user.findUniqueOrThrow({ where: { email: 't@uji.test' } });
+    const luarUser = await makeUser('luar-diskusi@uji.test', 'TIM');
+    const luarToken = signToken(luarUser);
+
+    const projRes = await api(tokens.operasional).post('/projects').send({
+      orderId,
+      nama: 'Portal Diskusi Klien',
+      members: [{ userId: timUser.id, posisi: 'Fullstack', isPm: true }],
+    });
+    assert.equal(projRes.status, 201);
+    projectId = projRes.body.data.id;
+    assert.equal(projRes.body.data.orderId, orderId);
+
+    const detailProj = await api(tokens.tim).get(`/projects/${projectId}`);
+    assert.equal(detailProj.status, 200);
+    assert.equal(detailProj.body.data.orderId, orderId);
+
+    // Anggota tim proyek terkait bisa membaca dan membalas; tim luar tetap 404.
+    assert.equal((await api(luarToken).get(`/orders/${orderId}/comments`)).status, 404);
+    assert.equal((await api(luarToken).post(`/orders/${orderId}/comments`).send({ pesan: 'Intip' })).status, 404);
+
+    const c3 = await api(tokens.tim).post(`/orders/${orderId}/comments`).send({ pesan: 'Fitur progres sudah naik 40%, silakan dicek.' });
+    assert.equal(c3.status, 201);
+    assert.equal(c3.body.data.author.role, 'TIM');
+
+    const c4 = await api(tokens.operasional).post(`/orders/${orderId}/comments`).send({ pesan: 'Target rilis tetap sesuai jadwal.' });
+    assert.equal(c4.status, 201);
+
+    const list = await api(tokens.klienA).get(`/orders/${orderId}/comments`);
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.length, 4);
+    assert.deepEqual(
+      list.body.data.map((c: { author: { role: string } }) => c.author.role),
+      ['KLIEN', 'MARKETING', 'TIM', 'OPERASIONAL'],
+    );
+  });
+
+  test('pengajuan ditolak atau proyek dibatalkan tidak menerima komentar baru (409)', async () => {
+    const orderDitolak = await api(tokens.klienA).post('/orders').send({
+      judul: 'Order Ditolak Diskusi',
+      kebutuhan: 'Kebutuhan singkat minimal sepuluh huruf.',
+    });
+    const ditolakId = orderDitolak.body.data.id;
+    await api(tokens.marketing).patch(`/orders/${ditolakId}/status`).send({ status: 'DITOLAK', alasanDitolak: 'Di luar cakupan.' });
+    assert.equal((await api(tokens.klienA).get(`/orders/${ditolakId}/comments`)).status, 200);
+    assert.equal((await api(tokens.klienA).post(`/orders/${ditolakId}/comments`).send({ pesan: 'Kenapa ditolak?' })).status, 409);
+
+    await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'DIBATALKAN' });
+    assert.equal((await api(tokens.klienA).post(`/orders/${orderId}/comments`).send({ pesan: 'Sudah batal?' })).status, 409);
   });
 });
 
