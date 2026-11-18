@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as controller from '../controllers/catalog.controller';
+import * as reviews from '../controllers/reviews.controller';
 import auth from '../middlewares/auth.middleware';
 import authorize from '../middlewares/role.middleware';
 import validate from '../middlewares/validate.middleware';
@@ -12,6 +13,9 @@ router.get('/services', controller.listPublicServices);
 router.get('/services/all', ...marketing, controller.listAllServices);
 router.post('/services', ...marketing, validate(createServiceSchema), controller.createService);
 router.put('/services/:id', ...marketing, validate(updateServiceSchema), controller.updateService);
+
+// Ulasan klien yang disetujui tampil, untuk landing page (publik).
+router.get('/testimonials', reviews.listPublic);
 
 router.get('/portfolios', controller.listPublicPortfolios);
 router.get('/portfolios/all', ...marketing, controller.listAllPortfolios);

@@ -530,7 +530,25 @@ describe('proyek, tugas, dan progres', () => {
     assert.equal(daftar.status, 200);
     assert.equal(daftar.body.data[0].client.namaInstansi, (await prisma.client.findUniqueOrThrow({ where: { id: klienAId } })).namaInstansi);
     assert.equal((await api(tokens.klienA).get('/reviews')).status, 403);
+    assert.equal(daftar.body.data[0].tampilPublik, false);
     await api(tokens.operasional).patch(`/projects/${projectId}`).send({ status: 'BERJALAN' });
+  });
+
+  test('ulasan publik hanya yang disetujui klien, tanpa data kontak (B-41)', async () => {
+    const reviewId = (await prisma.review.findUniqueOrThrow({ where: { projectId } })).id;
+    const publik = async () => (await request(app).get('/api/v1/testimonials')).body.data as Record<string, unknown>[];
+    assert.equal((await publik()).some((u) => u.id === reviewId), false, 'tanpa persetujuan tidak tampil');
+    assert.equal((await api(tokens.klienA).post(`/projects/${projectId}/review`).send({ rating: 5, tampilPublik: 'ya' })).status, 400);
+
+    await prisma.review.update({ where: { id: reviewId }, data: { tampilPublik: true } });
+    const tampil = (await publik()).find((u) => u.id === reviewId);
+    assert.ok(tampil, 'dengan persetujuan tampil tanpa login');
+    assert.deepEqual(Object.keys(tampil).sort(), ['createdAt', 'id', 'instansi', 'komentar', 'nama', 'rating']);
+    assert.equal(tampil.komentar, 'Hasilnya rapi.');
+
+    await prisma.review.update({ where: { id: reviewId }, data: { rating: 3 } });
+    assert.equal((await publik()).some((u) => u.id === reviewId), false, 'rating di bawah 4 tidak tampil');
+    await prisma.review.update({ where: { id: reviewId }, data: { rating: 4, tampilPublik: false } });
   });
 
   test('dashboard Marketing merangkum request, projek, dan pembayaran diterima', async () => {

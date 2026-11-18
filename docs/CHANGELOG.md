@@ -11,6 +11,14 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-18 (ulasan klien di landing page)
+
+### Ditambah
+- Kolom `reviews.tampil_publik` (`Review.tampilPublik`, bawaan `false`) lewat migrasi `ulasan_tampil_publik`: persetujuan klien agar ulasannya tampil di landing page (B-41).
+- `POST /projects/:projectId/review` menerima `tampilPublik` (boolean, opsional); `GET /reviews` menyertakan `tampilPublik`.
+- Endpoint publik `GET /testimonials` (`reviews.listPublic`): ulasan yang disetujui, berkomentar, rating 4 ke atas, klien aktif, maksimal 20 terbaru; isi hanya `id`, `nama`, `instansi`, `rating`, `komentar`, `createdAt`.
+- Uji integrasi: ulasan tanpa persetujuan tidak tampil, persetujuan bukan boolean ditolak, data publik tanpa kontak, rating di bawah 4 tidak tampil. OpenAPI dan panduan API diperbarui.
+
 ## 2026-11-18 (batas total tagihan)
 
 ### Diperbaiki

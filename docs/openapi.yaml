@@ -546,6 +546,14 @@ paths:
       responses:
         '200': { description: Jasa diperbarui }
         '404': { $ref: '#/components/responses/NotFound' }
+  /testimonials:
+    get:
+      tags: [Katalog]
+      summary: Ulasan klien untuk landing page
+      description: Publik. Hanya ulasan yang klien izinkan tampil (`tampilPublik`), berkomentar, dan berating 4 ke atas; paling banyak 20 terbaru. Berisi `id`, `nama`, `instansi`, `rating`, `komentar`, `createdAt` tanpa email, WhatsApp, atau data proyek (B-41).
+      security: []
+      responses:
+        '200': { description: Daftar ulasan publik }
   /portfolios:
     get:
       tags: [Katalog]
@@ -1040,6 +1048,10 @@ paths:
               properties:
                 rating: { type: integer, minimum: 1, maximum: 5 }
                 komentar: { type: string, maxLength: 2000 }
+                tampilPublik:
+                  type: boolean
+                  default: false
+                  description: Persetujuan klien agar ulasan (nama, instansi, rating, komentar) tampil di landing page.
       responses:
         '201': { description: Ulasan tersimpan }
         '409': { $ref: '#/components/responses/Conflict' }

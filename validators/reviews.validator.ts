@@ -8,6 +8,8 @@ export const createReviewSchema = z.object({
     .max(2000, 'Komentar maksimal 2000 karakter.')
     .optional()
     .transform((value) => value || null),
+  /** Klien mengizinkan ulasan tampil di landing page. Tanpa centang, ulasan hanya dilihat pengurus. */
+  tampilPublik: z.boolean({ error: 'Persetujuan tampil harus ya atau tidak.' }).optional().default(false),
 });
 
 export type CreateReviewInput = z.infer<typeof createReviewSchema>;

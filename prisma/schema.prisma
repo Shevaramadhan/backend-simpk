@@ -350,6 +350,8 @@ model Review {
   clientId  Int      @map("client_id")
   rating    Int
   komentar  String?  @db.Text
+  /// Persetujuan klien agar ulasan (nama, instansi, rating, komentar) tampil di landing page. Bawaan: tidak tampil.
+  tampilPublik Boolean @default(false) @map("tampil_publik")
   createdAt DateTime @default(now()) @map("created_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

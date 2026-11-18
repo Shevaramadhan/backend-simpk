@@ -24,6 +24,7 @@ Kode status umum: `400` data tidak valid, `401` belum masuk, `403` tidak berhak,
 | GET | `/services/all` | Marketing | Semua jasa, termasuk yang disembunyikan |
 | POST | `/services` | Marketing | Menambah jasa |
 | PUT | `/services/:id` | Marketing | Mengubah jasa; sembunyikan dengan `isVisible: false` |
+| GET | `/testimonials` | Publik | Ulasan klien yang disetujui tampil (B-41) |
 | GET | `/portfolios` | Publik | Portofolio, kecuali milik jasa tersembunyi |
 | GET | `/portfolios/all` | Marketing | Semua portofolio |
 | POST | `/portfolios` | Marketing | Menambah portofolio |
@@ -142,7 +143,9 @@ Marketing dan Operasional. Mengembalikan `requestMasuk` (status Baru dan Ditinja
 
 ### POST /projects/:projectId/review dan GET /reviews
 
-Klien pemilik memberi `rating` 1 sampai 5 dan `komentar` opsional setelah proyek berstatus Selesai; satu ulasan per proyek (409 bila sudah ada atau proyek belum selesai). `GET /reviews` untuk Marketing dan Operasional.
+Klien pemilik memberi `rating` 1 sampai 5, `komentar` opsional, dan `tampilPublik` (bawaan `false`) setelah proyek berstatus Selesai; satu ulasan per proyek (409 bila sudah ada atau proyek belum selesai). `GET /reviews` untuk Marketing dan Operasional, termasuk `tampilPublik`.
+
+`GET /testimonials` (publik) mengirim ulasan untuk landing page: hanya yang `tampilPublik`, berkomentar, rating 4 ke atas, dan klien aktif, paling banyak 20 terbaru. Isinya `id`, `nama`, `instansi`, `rating`, `komentar`, `createdAt`; tanpa email, WhatsApp, atau data proyek (B-41).
 
 ### GET /clients/me dan PATCH /clients/me
 
