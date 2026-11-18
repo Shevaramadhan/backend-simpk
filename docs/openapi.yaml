@@ -550,7 +550,7 @@ paths:
     get:
       tags: [Katalog]
       summary: Ulasan klien untuk landing page
-      description: Publik. Hanya ulasan yang klien izinkan tampil (`tampilPublik`), berkomentar, dan berating 4 ke atas; paling banyak 20 terbaru. Berisi `id`, `nama`, `instansi`, `rating`, `komentar`, `createdAt` tanpa email, WhatsApp, atau data proyek (B-41).
+      description: 'Publik. Hanya ulasan yang klien izinkan tampil (`tampilPublik`), berkomentar, dan berating 4 ke atas; paling banyak 20 terbaru. Berisi `id`, `nama`, `instansi`, `rating`, `komentar`, `contoh`, `createdAt` tanpa email, WhatsApp, atau data proyek (B-41). Ulasan dari akun demo hanya ikut bila `TAMPILKAN_ULASAN_CONTOH=true` dan selalu `contoh: true` (B-42).'
       security: []
       responses:
         '200': { description: Daftar ulasan publik }

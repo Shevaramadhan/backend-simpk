@@ -5,6 +5,7 @@ import { after, before, describe, mock, test } from 'node:test';
 import type { Role } from '@prisma/client';
 import request from 'supertest';
 import app from '../app';
+import config from '../config/env';
 import prisma from '../config/prisma';
 import { signToken } from '../utils/jwt';
 import { mailer } from '../utils/mailer';
@@ -543,12 +544,32 @@ describe('proyek, tugas, dan progres', () => {
     await prisma.review.update({ where: { id: reviewId }, data: { tampilPublik: true } });
     const tampil = (await publik()).find((u) => u.id === reviewId);
     assert.ok(tampil, 'dengan persetujuan tampil tanpa login');
-    assert.deepEqual(Object.keys(tampil).sort(), ['createdAt', 'id', 'instansi', 'komentar', 'nama', 'rating']);
+    assert.deepEqual(Object.keys(tampil).sort(), ['contoh', 'createdAt', 'id', 'instansi', 'komentar', 'nama', 'rating']);
+    assert.equal(tampil.contoh, false);
     assert.equal(tampil.komentar, 'Hasilnya rapi.');
 
     await prisma.review.update({ where: { id: reviewId }, data: { rating: 3 } });
     assert.equal((await publik()).some((u) => u.id === reviewId), false, 'rating di bawah 4 tidak tampil');
     await prisma.review.update({ where: { id: reviewId }, data: { rating: 4, tampilPublik: false } });
+  });
+
+  test('ulasan akun demo hanya tampil bila diaktifkan, selalu bertanda contoh (B-42)', async () => {
+    const review = await prisma.review.findUniqueOrThrow({ where: { projectId }, include: { client: { include: { user: true } } } });
+    const emailAsli = review.client.user.email;
+    const publik = async () => (await request(app).get('/api/v1/testimonials')).body.data as Record<string, unknown>[];
+    // Jadikan klien uji sebagai akun demo dan setujui tampil: tetap tidak tampil sebagai ulasan sungguhan.
+    await prisma.user.update({ where: { id: review.client.userId }, data: { email: `demo-${review.id}@demo.test` } });
+    await prisma.review.update({ where: { id: review.id }, data: { tampilPublik: true, rating: 5 } });
+    try {
+      assert.equal((await publik()).some((u) => u.id === review.id), false, 'akun demo tidak tampil saat dimatikan');
+      config.ulasanContoh = true;
+      const tampil = (await publik()).find((u) => u.id === review.id);
+      assert.equal(tampil?.contoh, true, 'akun demo tampil bertanda contoh saat diaktifkan');
+    } finally {
+      config.ulasanContoh = false;
+      await prisma.user.update({ where: { id: review.client.userId }, data: { email: emailAsli } });
+      await prisma.review.update({ where: { id: review.id }, data: { tampilPublik: false, rating: 4 } });
+    }
   });
 
   test('dashboard Marketing merangkum request, projek, dan pembayaran diterima', async () => {

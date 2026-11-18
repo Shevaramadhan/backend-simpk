@@ -145,7 +145,7 @@ Marketing dan Operasional. Mengembalikan `requestMasuk` (status Baru dan Ditinja
 
 Klien pemilik memberi `rating` 1 sampai 5, `komentar` opsional, dan `tampilPublik` (bawaan `false`) setelah proyek berstatus Selesai; satu ulasan per proyek (409 bila sudah ada atau proyek belum selesai). `GET /reviews` untuk Marketing dan Operasional, termasuk `tampilPublik`.
 
-`GET /testimonials` (publik) mengirim ulasan untuk landing page: hanya yang `tampilPublik`, berkomentar, rating 4 ke atas, dan klien aktif, paling banyak 20 terbaru. Isinya `id`, `nama`, `instansi`, `rating`, `komentar`, `createdAt`; tanpa email, WhatsApp, atau data proyek (B-41).
+`GET /testimonials` (publik) mengirim ulasan untuk landing page: hanya yang `tampilPublik`, berkomentar, rating 4 ke atas, dan klien aktif, paling banyak 20 terbaru. Isinya `id`, `nama`, `instansi`, `rating`, `komentar`, `contoh`, `createdAt`; tanpa email, WhatsApp, atau data proyek (B-41). Ulasan dari akun demo (`@demo.test`, `@contoh.test`) tidak pernah tampil sebagai ulasan sungguhan: hanya bila `TAMPILKAN_ULASAN_CONTOH=true`, selalu dengan `contoh: true` agar landing page memberi label "Data contoh" (B-42).
 
 ### GET /clients/me dan PATCH /clients/me
 

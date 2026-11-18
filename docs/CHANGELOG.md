@@ -11,6 +11,14 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-18 (ulasan contoh dari data demo)
+
+### Ditambah
+- Variabel `TAMPILKAN_ULASAN_CONTOH` (bawaan `false`, `config.ulasanContoh`): bila `true`, `GET /testimonials` ikut mengirim ulasan dari akun demo (`@demo.test`, `@contoh.test`) dengan `contoh: true` agar landing page memberi label "Data contoh" (B-42). Ulasan akun demo tidak pernah tampil sebagai ulasan sungguhan, walaupun `tampilPublik` bernilai true.
+- `GET /testimonials` kini menyertakan `contoh` (boolean) pada setiap ulasan.
+- `npm run db:demo` menambah dua proyek selesai yang sudah diulas (HIMA Teknik Komputer, Lab Sistem Tertanam), sehingga ada empat ulasan contoh dan pita ulasan di landing page bergerak.
+- Uji integrasi: ulasan akun demo tidak tampil saat dimatikan dan bertanda contoh saat diaktifkan. `.env.example`, panduan deploy, API, dan OpenAPI diperbarui.
+
 ## 2026-11-18 (ulasan klien di landing page)
 
 ### Ditambah

@@ -340,7 +340,8 @@ async function isi() {
     proyek: { status: 'PERSIAPAN', mulai: 7, target: hariLagi(75), tim: [], tugas: [] },
   });
 
-  // 8-10. Proyek selesai: dua sudah diulas, satu milik Contoh Klien belum diulas (untuk mencoba form ulasan).
+  // 8-12. Proyek selesai: empat sudah diulas (contoh ulasan landing page, B-42), satu milik Contoh Klien belum
+  // diulas (untuk mencoba form ulasan).
   await pesanan({
     klien: k.sari,
     judul: 'Website Company Profile CV Minang Digital',
@@ -401,6 +402,64 @@ async function isi() {
     },
   });
   await pesanan({
+    klien: k.andi,
+    judul: 'Website Open Recruitment HIMA Teknik Komputer',
+    kebutuhan: 'Website pendaftaran anggota baru dengan formulir, jadwal wawancara, dan pengumuman hasil seleksi.',
+    anggaran: 3_500_000,
+    nilai: 3_500_000,
+    tenggat: hariLalu(40),
+    status: 'MENJADI_PROYEK',
+    dibuat: 100,
+    tagihan: [
+      { keterangan: 'DP 50%', total: 1_750_000, terbit: 96, bayar: { hari: 95, status: 'DITERIMA' } },
+      { keterangan: 'Pelunasan', total: 1_750_000, terbit: 45, bayar: { hari: 43, status: 'DITERIMA' } },
+    ],
+    proyek: {
+      status: 'SELESAI',
+      mulai: 92,
+      target: hariLalu(42),
+      selesai: 44,
+      tim: [
+        [w.nadia, 'Frontend Developer', true],
+        [w.fajar, 'Backend Developer', false],
+      ],
+      tugas: [
+        { judul: 'Formulir pendaftaran dan jadwal wawancara', bidang: 'FRONTEND', bobot: 2, persen: 100, oleh: w.nadia },
+        { judul: 'Pengumuman hasil seleksi', bidang: 'BACKEND', bobot: 2, persen: 100, oleh: w.fajar },
+      ],
+      ulasan: [5, 'Pendaftaran anggota baru jadi jauh lebih tertib. Tim sabar menjelaskan cara mengelola datanya.'],
+    },
+  });
+  await pesanan({
+    klien: k.budi,
+    judul: 'Sistem Jadwal Praktikum Lab Sistem Tertanam',
+    kebutuhan: 'Sistem jadwal praktikum dengan pembagian kelompok, pengingat jadwal, dan rekap kehadiran praktikan.',
+    anggaran: 4_500_000,
+    nilai: 4_000_000,
+    tenggat: hariLalu(25),
+    status: 'MENJADI_PROYEK',
+    dibuat: 85,
+    tagihan: [
+      { keterangan: 'DP 50%', total: 2_000_000, terbit: 82, bayar: { hari: 80, status: 'DITERIMA' } },
+      { keterangan: 'Pelunasan', total: 2_000_000, terbit: 30, bayar: { hari: 28, status: 'DITERIMA' } },
+    ],
+    proyek: {
+      status: 'SELESAI',
+      mulai: 78,
+      target: hariLalu(27),
+      selesai: 29,
+      tim: [
+        [w.dimas, 'Fullstack Developer', true],
+        [w.aulia, 'UI/UX Designer', false],
+      ],
+      tugas: [
+        { judul: 'Desain halaman jadwal', bidang: 'UI_UX', bobot: 1, persen: 100, oleh: w.aulia },
+        { judul: 'Pembagian kelompok dan rekap kehadiran', bidang: 'BACKEND', bobot: 3, persen: 100, oleh: w.dimas },
+      ],
+      ulasan: [4, 'Jadwal praktikum kini mudah dipantau asisten. Progres proyek juga selalu bisa dicek di SIMPK.'],
+    },
+  });
+  await pesanan({
     klien: k.contoh,
     judul: 'Website Alumni Fakultas Teknik',
     kebutuhan: 'Website pendataan alumni dengan pencarian alumni, lowongan kerja, dan berita kegiatan alumni.',
@@ -451,7 +510,7 @@ async function isi() {
     dibuat: 70,
   });
 
-  console.log('Data demo dimasukkan: 12 pesanan, 7 proyek, 6 worker, 5 klien dummy.');
+  console.log('Data demo dimasukkan: 14 pesanan, 9 proyek, 6 worker, 5 klien dummy.');
   console.log('Akun dummy memakai kata sandi SEED_PASSWORD, misalnya rizky@demo.test (Tim) dan rina@demo.test (Klien).');
 }
 

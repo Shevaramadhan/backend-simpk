@@ -24,6 +24,9 @@ export default {
   trustProxy: Number(process.env.TRUST_PROXY) || 0,
   // true hanya di pengembangan: mengaktifkan Try it out di /api/v1/docs. Bawaan mati agar dokumentasi publik hanya untuk dibaca.
   docsTryIt: process.env.DOCS_TRY_IT === 'true',
+  // true: ulasan dari akun demo (@demo.test, @contoh.test) ikut tampil di landing page dengan tanda contoh (B-42).
+  // Matikan setelah ada ulasan klien sungguhan.
+  ulasanContoh: process.env.TAMPILKAN_ULASAN_CONTOH === 'true',
   // Kosong berarti tombol Google di halaman masuk tidak aktif.
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   uploadDir: path.resolve(process.env.UPLOAD_DIR || 'uploads'),
