@@ -743,6 +743,30 @@ describe('pengaturan dan perbaikan tagihan', () => {
     await api(tokens.marketing).patch(`/payments/${payment.id}`).send({ status: 'DITERIMA' });
     assert.equal((await api(tokens.marketing).post(`/invoices/${id}/batal`).send({ alasan: 'Coba batalkan.' })).status, 409);
   });
+
+  test('total tagihan tidak boleh melebihi nilai yang disepakati (BUG-01)', async () => {
+    const order = await api(tokens.klienA).post('/orders').send({ judul: 'Project Batas Tagihan', kebutuhan: 'Kebutuhan untuk uji batas tagihan.' });
+    const orderId = order.body.data.id as number;
+    await api(tokens.marketing).post(`/orders/${orderId}/approve`).send({ nilaiDisepakati: 4000000 });
+    const tagih = (total: number, keterangan = 'Tagihan') => api(tokens.marketing).post(`/orders/${orderId}/invoices`).send({ keterangan, total });
+
+    const dp = await tagih(2000000, 'DP 50%');
+    assert.equal(dp.status, 201);
+    const lebih = await tagih(2500000, 'Pelunasan');
+    assert.equal(lebih.status, 409);
+    assert.match(lebih.body.message, /Sisa yang dapat ditagih/);
+    const pelunasan = await tagih(2000000, 'Pelunasan');
+    assert.equal(pelunasan.status, 201);
+    // Sudah ditagih penuh: tagihan tambahan ditolak, termasuk mengubah nominal menjadi lebih besar.
+    const penuh = await tagih(1, 'Tambahan');
+    assert.equal(penuh.status, 409);
+    assert.match(penuh.body.message, /sudah ditagih/);
+    assert.equal((await api(tokens.marketing).patch(`/invoices/${pelunasan.body.data.id}`).send({ total: 2500000 })).status, 409);
+    // Nominal boleh diubah selama total tetap dalam batas, dan tagihan yang dibatalkan tidak dihitung.
+    assert.equal((await api(tokens.marketing).patch(`/invoices/${pelunasan.body.data.id}`).send({ total: 1500000 })).status, 200);
+    await api(tokens.marketing).post(`/invoices/${pelunasan.body.data.id}/batal`).send({ alasan: 'Diterbitkan ulang dengan nominal benar.' });
+    assert.equal((await tagih(2000000, 'Pelunasan')).status, 201);
+  });
 });
 
 describe('dokumen pendukung tambahan', () => {

@@ -40,6 +40,31 @@ function idParam(req: Request, name: string, label: string): number {
   return id;
 }
 
+const rupiah = (n: number) => `Rp${n.toLocaleString('id-ID')}`;
+
+/**
+ * Total tagihan aktif (selain yang dibatalkan) tidak boleh melebihi nilai yang disepakati, agar klien tidak ditagih
+ * dua kali (BUG-01 QA). `kecuali` dipakai saat mengubah tagihan agar nilai lamanya tidak ikut dihitung.
+ */
+async function cekBatasTagihan(orderId: number, total: number, kecuali?: number) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { nilaiDisepakati: true, invoices: { where: { status: { not: 'DIBATALKAN' }, ...(kecuali ? { id: { not: kecuali } } : {}) }, select: { total: true } } },
+  });
+  if (!order?.nilaiDisepakati) return;
+  const nilai = Number(order.nilaiDisepakati);
+  const ditagih = order.invoices.reduce((n, invoice) => n + Number(invoice.total), 0);
+  if (ditagih + total > nilai) {
+    const sisa = Math.max(nilai - ditagih, 0);
+    throw new ApiError(
+      409,
+      sisa > 0
+        ? `Total tagihan melebihi nilai yang disepakati (${rupiah(nilai)}). Sisa yang dapat ditagih ${rupiah(sisa)}.`
+        : `Seluruh nilai yang disepakati (${rupiah(nilai)}) sudah ditagih. Batalkan tagihan yang belum dibayar bila perlu menerbitkan ulang.`,
+    );
+  }
+}
+
 /** Marketing menerbitkan tagihan, misalnya DP lalu pelunasan, untuk pesanan yang sudah disetujui (BPMN 3). */
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
@@ -50,6 +75,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
     if (order.status !== 'DISETUJUI' && order.status !== 'MENJADI_PROYEK') {
       throw new ApiError(409, 'Tagihan hanya untuk pesanan yang sudah disetujui.');
     }
+    await cekBatasTagihan(orderId, Number(data.total));
     const invoice = await prisma.invoice.create({
       data: { ...data, orderId, nomor: invoiceNumber(), issuedById: req.user!.id, jatuhTempo: jatuhTempo ? new Date(jatuhTempo) : null },
       select: invoiceFields,
@@ -80,6 +106,10 @@ export async function update(req: Request, res: Response, next: NextFunction) {
     const id = idParam(req, 'id', 'Tagihan');
     await editableInvoice(id);
     const { jatuhTempo, ...data } = req.body as UpdateInvoiceInput;
+    if (data.total !== undefined) {
+      const lama = await prisma.invoice.findUniqueOrThrow({ where: { id }, select: { orderId: true } });
+      await cekBatasTagihan(lama.orderId, Number(data.total), id);
+    }
     const invoice = await prisma.invoice.update({
       where: { id },
       data: { ...data, jatuhTempo: jatuhTempo === undefined ? undefined : jatuhTempo ? new Date(jatuhTempo) : null },

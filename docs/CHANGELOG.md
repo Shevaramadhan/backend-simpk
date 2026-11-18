@@ -11,6 +11,12 @@ Semua perubahan dicatat di sini, terbaru di atas. Setiap entri ditulis dalam com
 - Apa yang berubah dan alasannya.
 ```
 
+## 2026-11-18 (batas total tagihan)
+
+### Diperbaiki
+- BUG-01 (QA): `POST /orders/:id/invoices` dan `PATCH /invoices/:id` menolak 409 bila total tagihan aktif melebihi nilai yang disepakati, dengan pesan sisa yang masih dapat ditagih (B-40). Tagihan yang dibatalkan tidak dihitung.
+- Uji integrasi baru: tagihan melebihi nilai ditolak, tagihan setelah ditagih penuh ditolak, ubah nominal dalam batas diterima, dan tagihan dapat diterbitkan ulang setelah yang lama dibatalkan.
+
 ## 2026-11-17 (komentar dan diskusi proyek)
 
 ### Ditambah

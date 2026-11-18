@@ -134,7 +134,7 @@ Identitas dan rekening Neo Telemetri untuk tagihan: `nama`, `alamat`, `telepon`,
 
 ### PATCH /invoices/:id dan POST /invoices/:id/batal
 
-Marketing mengubah `keterangan`, `total`, `jatuhTempo`, atau membatalkan dengan `alasan` (minimal 5 karakter). Ditolak 409 bila tagihan sudah lunas, sudah dibatalkan, atau ada bukti yang sedang diperiksa. Tagihan berstatus `DIBATALKAN` tidak menerima bukti transfer.
+Marketing mengubah `keterangan`, `total`, `jatuhTempo`, atau membatalkan dengan `alasan` (minimal 5 karakter). Ditolak 409 bila tagihan sudah lunas, sudah dibatalkan, ada bukti yang sedang diperiksa, atau `total` baru membuat jumlah tagihan melebihi nilai yang disepakati. Tagihan berstatus `DIBATALKAN` tidak menerima bukti transfer.
 
 ### GET /dashboard
 
@@ -188,7 +188,7 @@ Setiap project menyertakan `progres`, `progresBidang`, `kebutuhan`, dan `tenggat
 
 ### POST /orders/:id/invoices
 
-Marketing, untuk pesanan Disetujui atau Menjadi Proyek.
+Marketing, untuk pesanan Disetujui atau Menjadi Proyek. Total tagihan aktif (selain yang dibatalkan) tidak boleh melebihi `nilaiDisepakati`; bila melebihi, ditolak 409 dengan sisa yang masih dapat ditagih (B-40).
 
 ```json
 { "keterangan": "DP 50%", "total": 4000000, "jatuhTempo": "2026-11-30" }

@@ -758,7 +758,7 @@ paths:
     post:
       tags: [Tagihan]
       summary: Terbitkan tagihan
-      description: 'Role: Marketing. Untuk pesanan DISETUJUI atau MENJADI_PROYEK, misalnya DP lalu pelunasan.'
+      description: 'Role: Marketing. Untuk pesanan DISETUJUI atau MENJADI_PROYEK, misalnya DP lalu pelunasan. Total tagihan aktif tidak boleh melebihi nilai yang disepakati (409).'
       parameters: [{ $ref: '#/components/parameters/id' }]
       requestBody:
         required: true
